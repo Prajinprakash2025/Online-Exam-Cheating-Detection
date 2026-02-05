@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* CSS Variables for this page */
+    :root {
+        --primary-dark: #2c3e50;
+        --primary-purple: #8e44ad;
+        --bg-cream: #f3f4f6;
+        --btn-hover: #732d91;
+    }
+    
+    /* Ensure form controls look good */
+    .form-control, .form-select {
+        border-radius: 50px;
+        padding: 0.8rem 1.2rem;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        font-size: 0.95rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #fff;
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        outline: none;
+    }
+
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+
+    .btn-custom:hover {
+        background-color: var(--btn-hover);
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-center py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                <div class="card border-0 shadow-lg rounded-5 overflow-hidden">
+                    <div class="row g-0">
+                        
+                        <div class="col-lg-4 d-none d-lg-flex flex-column align-items-center justify-content-center p-5 text-center text-white" 
+                             style="background-color: var(--primary-dark);">
+                            <div class="mb-4 bg-white bg-opacity-10 p-4 rounded-circle">
+                                <i class="fa-solid fa-rocket display-4"></i>
+                            </div>
+                            <h2 class="fw-bold mb-3">Join SkillStream</h2>
+                            <p class="opacity-75 mb-4">Start your journey today. Unlock access to premium courses, quizzes, and a community of learners.</p>
+                        </div>
+
+                        <div class="col-lg-8 bg-white p-5">
+                            <h3 class="fw-bold mb-4" style="color: var(--primary-dark);">Create Student Account</h3>
+                            
+                            {% if form.errors %}
+                                <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm" role="alert">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fa-solid fa-triangle-exclamation me-3 fs-4 mt-1"></i>
+                                        <div>
+                                            <strong>Please correct the errors below:</strong>
+                                            
+                                            {% if form.non_field_errors %}
+                                                <ul class="mb-0 mt-1 ps-3 text-danger">
+                                                    {% for error in form.non_field_errors %}
+                                                        <li>{{ error }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                            
+                                            {% for field in form %}
+                                                {% if field.errors %}
+                                                    <div class="small mt-1">
+                                                        <strong>{{ field.label }}:</strong> {{ field.errors.0 }}
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endif %}
+                            
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <h6 class="text-uppercase text-muted fw-bold small mb-3">Personal Details</h6>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        {{ form.first_name }}
+                                        {% if form.first_name.errors %}<div class="text-danger small ms-3 mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.last_name }}
+                                        {% if form.last_name.errors %}<div class="text-danger small ms-3 mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.email }}
+                                        {% if form.email.errors %}<div class="text-danger small ms-3 mt-1">{{ form.email.errors.0 }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.phone_number }}
+                                        {% if form.phone_number.errors %}<div class="text-danger small ms-3 mt-1">{{ form.phone_number.errors.0 }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.age }}
+                                        {% if form.age.errors %}<div class="text-danger small ms-3 mt-1">{{ form.age.errors.0 }}</div>{% endif %}
+                                    </div>
+                                </div>
+
+                                <h6 class="text-uppercase text-muted fw-bold small mb-3 mt-4">Academic Info</h6>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        {{ form.roll_no }}
+                                        {% if form.roll_no.errors %}<div class="text-danger small ms-3 mt-1">{{ form.roll_no.errors.0 }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.course_interest }}
+                                        {% if form.course_interest.errors %}<div class="text-danger small ms-3 mt-1">{{ form.course_interest.errors.0 }}</div>{% endif %}
+                                    </div>
+                                </div>
+
+                                <h6 class="text-uppercase text-muted fw-bold small mb-3 mt-4">Security</h6>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12">
+                                        {{ form.username }}
+                                        {% if form.username.errors %}<div class="text-danger small ms-3 mt-1">{{ form.username.errors.0 }}</div>{% endif %}
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        {{ form.password1 }}
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted ms-2">Password</small>
+                                            {% if form.password1.errors %}<small class="text-danger me-2">{{ form.password1.errors.0 }}</small>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.password2 }} 
+                                        <small class="text-muted ms-2">Confirm Password</small>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-custom w-100 rounded-pill py-3 fw-bold shadow-sm">
+                                    Create Account
+                                </button>
+                            </form>
+
+                            <p class="text-center mt-4 text-muted small">
+                                Already have an account? <a href="{% url 'login' %}" class="fw-bold text-decoration-none" style="color: var(--primary-purple);">Log In</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

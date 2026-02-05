@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-5" style="background-color: var(--bg-cream); min-height: 90vh;">
+    <div class="container">
+        
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-8">
+                <a href="{% url 'student_list' %}" class="text-decoration-none fw-bold text-muted d-inline-block">
+                    <i class="fa-solid fa-arrow-left me-2"></i> Back to Student List
+                </a>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                    
+                    <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-dark">Student Profile</h5>
+                        
+                        {% if not student.is_superuser %}
+                            <a href="{% url 'delete_student' student.id %}" class="btn btn-outline-danger btn-sm rounded-pill fw-bold" onclick="return confirm('WARNING: This will permanently delete the student and all their progress. Are you sure?');">
+                                <i class="fa-solid fa-trash-can me-2"></i>Delete Student
+                            </a>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-body p-4 p-md-5">
+                        
+                        <div class="d-flex align-items-center mb-5">
+                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-4 border shadow-sm" style="width: 80px; height: 80px;">
+                                <i class="fa-solid fa-user-graduate fs-2 text-secondary"></i>
+                            </div>
+                            <div>
+                                <h3 class="fw-bold mb-1 text-dark">{{ student.first_name }} {{ student.last_name }}</h3>
+                                <div class="d-flex align-items-center text-muted gap-3 small">
+                                    <span><i class="fa-solid fa-at me-1"></i> {{ student.username }}</span>
+                                    <span><i class="fa-regular fa-envelope me-1"></i> {{ student.email }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="text-uppercase fw-bold text-muted small ls-1 mb-3">Academic Details</h6>
+                        <div class="row g-3 mb-5">
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-4 border">
+                                    <small class="text-muted fw-bold d-block mb-1 text-uppercase" style="font-size: 0.7rem;">Phone Number</small>
+                                    <p class="mb-0 fw-bold text-dark">
+                                        {% if student.phone_number %}{{ student.phone_number }}{% else %}<span class="text-muted fst-italic">Not provided</span>{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-4 border">
+                                    <small class="text-muted fw-bold d-block mb-1 text-uppercase" style="font-size: 0.7rem;">Student ID / Roll No</small>
+                                    <p class="mb-0 fw-bold text-dark">
+                                        {% if student.roll_no %}{{ student.roll_no }}{% else %}<span class="text-muted fst-italic">Not provided</span>{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-4 border">
+                                    <small class="text-muted fw-bold d-block mb-1 text-uppercase" style="font-size: 0.7rem;">Date Joined</small>
+                                    <p class="mb-0 fw-bold text-dark">{{ student.date_joined|date:"M d, Y" }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-4 border">
+                                    <small class="text-muted fw-bold d-block mb-1 text-uppercase" style="font-size: 0.7rem;">Account Status</small>
+                                    <p class="mb-0 fw-bold text-success"><i class="fa-solid fa-circle-check me-1"></i> Active</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="border-light mb-4">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold text-dark mb-0">Enrolled Courses</h6>
+                            <span class="badge bg-light text-dark border rounded-pill">{{ enrolled_courses.count }}</span>
+                        </div>
+
+                        <div class="list-group">
+                            {% for enrollment in enrolled_courses %}
+                                <div class="list-group-item border rounded-3 mb-2 p-3 d-flex justify-content-between align-items-center shadow-sm h-100">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-2 bg-light border d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                            <i class="fa-solid fa-book text-muted"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">{{ enrollment.course.title }}</h6>
+                                            <small class="text-muted">
+                                                {% if enrollment.is_completed %}
+                                                    <span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>Completed</span>
+                                                {% else %}
+                                                    Progress: Lesson {{ enrollment.current_lesson_index }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <a href="#" class="btn btn-light btn-sm rounded-circle" title="View Details"><i class="fa-solid fa-chevron-right text-muted"></i></a>
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-4 bg-light rounded-3 border border-dashed">
+                                    <p class="text-muted mb-0 small">Not enrolled in any courses yet.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

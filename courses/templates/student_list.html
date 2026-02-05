@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-dark: #2c3e50;
+        --bg-cream: #f3f4f6;
+    }
+
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+    .btn-custom:hover {
+        background-color: #732d91;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
+    <div class="container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1" style="color: var(--primary-dark);">Student Registry</h2>
+                <p class="text-muted mb-0">Manage and view details of all enrolled learners.</p>
+            </div>
+            <a href="{% url 'instructor_dashboard' %}" class="btn btn-outline-dark rounded-pill px-4 fw-bold">
+                <i class="fa-solid fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4 py-3 text-uppercase text-muted small fw-bold" style="width: 35%;">Student Name</th>
+                                <th class="py-3 text-uppercase text-muted small fw-bold">Contact Info</th>
+                                <th class="py-3 text-uppercase text-muted small fw-bold">Roll No</th>
+                                <th class="py-3 text-uppercase text-muted small fw-bold">Joined Date</th>
+                                <th class="text-end pe-4 py-3 text-uppercase text-muted small fw-bold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td class="ps-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3 fw-bold border border-primary border-opacity-25" 
+                                             style="width: 45px; height: 45px; font-size: 1.1rem;">
+                                            {{ student.username|make_list|first|upper }}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">{{ student.first_name }} {{ student.last_name }}</h6>
+                                            <small class="text-muted">@{{ student.username }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <small class="mb-1"><i class="fa-regular fa-envelope me-2 text-muted" style="width: 15px;"></i>{{ student.email }}</small>
+                                        <small><i class="fa-solid fa-phone me-2 text-muted" style="width: 15px;"></i>{{ student.phone_number|default:"--" }}</small>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="badge bg-light text-dark border fw-normal">{{ student.roll_no|default:"N/A" }}</span>
+                                </td>
+
+                                <td>
+                                    <small class="text-muted fw-bold">{{ student.date_joined|date:"M d, Y" }}</small>
+                                </td>
+
+                                <td class="text-end pe-4">
+                                    <a href="{% url 'student_detail' student.id %}" class="btn btn-sm btn-custom rounded-pill px-4 fw-bold shadow-sm">
+                                        View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="fa-solid fa-users-slash fs-1 mb-3 opacity-25"></i>
+                                        <p class="mb-0">No students found in the registry.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

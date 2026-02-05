@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SkillStream | Professional Learning</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+      :root {
+        --primary-dark: #2c3e50;     /* Matches your specific dark blue/grey */
+        --primary-purple: #8e44ad;   /* Your brand purple */
+        --bg-cream: #f3f4f6;         /* Light grey/cream background */
+        --white: #ffffff;
+      }
+      
+      body {
+        font-family: 'Manrope', sans-serif;
+        background-color: var(--white);
+        color: var(--primary-dark);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      /* === NAVBAR STYLING === */
+      .navbar {
+        background: rgba(255, 255, 255, 0.95); /* Slight transparency */
+        backdrop-filter: blur(10px);
+        padding: 1rem 0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      }
+
+      .navbar-brand {
+        font-weight: 800;
+        font-size: 1.5rem;
+        color: var(--primary-dark) !important;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        letter-spacing: -0.5px;
+      }
+
+      .logo-box {
+        background: var(--primary-purple);
+        color: white;
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 1.2rem;
+        box-shadow: 0 4px 10px rgba(142, 68, 173, 0.3);
+      }
+
+      .nav-link {
+        font-weight: 600;
+        color: #666 !important;
+        margin: 0 12px;
+        transition: all 0.3s;
+        position: relative;
+      }
+
+      .nav-link:hover {
+        color: var(--primary-purple) !important;
+        transform: translateY(-1px);
+      }
+
+      /* Buttons */
+      .btn-outline-custom {
+        border: 2px solid var(--primary-dark);
+        color: var(--primary-dark);
+        font-weight: 700;
+        padding: 0.6rem 1.5rem;
+        transition: all 0.3s;
+      }
+      .btn-outline-custom:hover {
+        background: var(--primary-dark);
+        color: white;
+        transform: translateY(-2px);
+      }
+
+      .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        font-weight: 700;
+        padding: 0.6rem 1.5rem;
+        border: 2px solid var(--primary-purple);
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(142, 68, 173, 0.2);
+      }
+      .btn-custom:hover {
+        background-color: #732d91;
+        border-color: #732d91;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(142, 68, 173, 0.3);
+      }
+
+      /* User Dropdown */
+      .dropdown-menu {
+        border: none;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        border-radius: 15px;
+        padding: 10px;
+        margin-top: 15px !important;
+      }
+      .dropdown-item {
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-weight: 600;
+        color: #555;
+      }
+      .dropdown-item:hover {
+        background-color: var(--bg-cream);
+        color: var(--primary-purple);
+      }
+
+      /* === FOOTER === */
+      footer {
+        background-color: var(--primary-dark);
+        color: white;
+        padding: 80px 0 30px 0;
+        margin-top: auto;
+      }
+      
+      footer h5 {
+        font-weight: 800;
+        margin-bottom: 25px;
+        letter-spacing: 0.5px;
+      }
+
+      footer a {
+        color: #aaa;
+        text-decoration: none;
+        display: block;
+        margin-bottom: 12px;
+        transition: all 0.2s;
+        font-size: 0.95rem;
+      }
+      
+      footer a:hover { 
+        color: white; 
+        transform: translateX(5px);
+      }
+
+      .footer-input {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 50px;
+        width: 100%;
+        margin-bottom: 15px;
+      }
+      .footer-input:focus {
+        outline: none;
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.3);
+      }
+      .footer-input::placeholder { color: #888; }
+
+    </style>
+  </head>
+  <body>
+
+    <nav class="navbar navbar-expand-lg sticky-top">
+      <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <div class="logo-box">ss</div>
+            SkillStream
+        </a>
+        
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav mx-auto">
+            <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'course_list' %}">Courses</a></li>      
+            <li class="nav-item"><a class="nav-link" href="{% url 'mentors' %}">Mentors</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contact</a></li>
+          </ul>
+
+          <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+            {% if user.is_authenticated %}
+                <div class="dropdown">
+                  <button class="btn btn-light dropdown-toggle rounded-pill px-4 border shadow-sm d-flex align-items-center gap-2" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" class="rounded-circle" width="25" height="25">
+                    {% else %}
+                        <i class="fa-solid fa-circle-user text-muted fs-5"></i>
+                    {% endif %}
+                    <span class="fw-bold small">{{ user.username }}</span>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+                    {% if user.is_instructor or user.is_superuser %}
+                        <li>
+                            <a class="dropdown-item text-primary" href="{% url 'instructor_dashboard' %}">
+                                <i class="fa-solid fa-chalkboard-user me-2"></i> Instructor Panel
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                    {% endif %}
+                    <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fa-regular fa-id-card me-2"></i> My Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <form action="{% url 'logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-danger">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i> Log Out
+                        </button>
+                      </form>
+                    </li>
+                  </ul>
+                </div>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline-custom rounded-pill">Sign In</a>
+                <a href="{% url 'signup' %}" class="btn btn-custom rounded-pill">Get Started</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    {% if messages %}
+        <div class="container mt-4">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-4 shadow-sm" role="alert">
+                    {% if message.tags == 'success' %}
+                        <i class="fa-solid fa-circle-check me-2"></i>
+                    {% elif message.tags == 'error' %}
+                        <i class="fa-solid fa-circle-exclamation me-2"></i>
+                    {% endif %}
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div style="min-height: 80vh;">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="logo-box" style="background: white; color: var(--primary-dark); box-shadow: none;">ss</div>
+                        <h4 class="mb-0 fw-bold">SkillStream</h4>
+                    </div>
+                    <p class="text-white-50 small mb-4" style="max-width: 300px; line-height: 1.6;">
+                        Empowering learners worldwide to master new skills and achieve their career goals through world-class education.
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white"><i class="fa-brands fa-twitter fs-5"></i></a>
+                        <a href="#" class="text-white"><i class="fa-brands fa-linkedin fs-5"></i></a>
+                        <a href="#" class="text-white"><i class="fa-brands fa-instagram fs-5"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-6 mb-4">
+                    <h5>Platform</h5>
+                    <a href="{% url 'home' %}">Home</a>
+                    <a href="{% url 'course_list' %}">Browse Courses</a>
+                    <a href="{% url 'mentors' %}">Our Mentors</a>
+                    <a href="#">Pricing</a>
+                </div>
+                <div class="col-lg-2 col-6 mb-4">
+                    <h5>Support</h5>
+                    <a href="{% url 'contact' %}">Help Center</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">FAQ</a>
+                </div>
+                <div class="col-lg-4">
+                    <h5>Stay up to date</h5>
+                    <p class="text-white-50 small mb-3">Subscribe to our newsletter for the latest updates.</p>
+                    <form class="position-relative">
+                        <input type="email" class="footer-input" placeholder="Your email address">
+                        <button class="btn btn-custom position-absolute top-0 end-0 m-1 rounded-pill px-4 py-2" style="font-size: 0.85rem;">
+                            Join
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <hr class="border-secondary mt-5 mb-4 opacity-25">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div class="text-white-50 small">
+                    &copy; 2026 SkillStream LMS. All rights reserved.
+                </div>
+                <div class="text-white-50 small">
+                    Designed with <i class="fa-solid fa-heart text-danger mx-1"></i> by SkillStream Team
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

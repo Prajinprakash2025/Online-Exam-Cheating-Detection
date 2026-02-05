@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="background-color: var(--bg-cream); padding: 5rem 0;">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bolder mb-3">Meet the <span style="color: var(--primary-purple);">Mentors</span></h1>
+        <p class="lead text-muted mx-auto" style="max-width: 600px;">
+            Learn from the top 1% of industry experts who have built systems at world-class companies.
+        </p>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm mentor-card text-center p-3">
+                <div class="position-relative mx-auto mb-3" style="width: 120px; height: 120px;">
+                    <img src="https://i.pravatar.cc/300?img=11" class="rounded-circle w-100 h-100 object-fit-cover border border-4 border-white shadow-sm">
+                    <span class="position-absolute bottom-0 end-0 bg-white p-1 rounded-circle shadow-sm" style="width: 30px; height: 30px;">
+                        <i class="fa-brands fa-google text-danger"></i>
+                    </span>
+                </div>
+                <h5 class="fw-bold mb-1">David Chen</h5>
+                <small class="text-primary fw-bold text-uppercase" style="font-size: 0.7rem;">Full Stack Lead</small>
+                <p class="text-muted small mt-3">Ex-Google Engineer with 10+ years of experience in scalable systems.</p>
+                <div class="mt-auto pt-3 border-top">
+                    <a href="#" class="text-muted me-2"><i class="fa-brands fa-linkedin"></i></a>
+                    <a href="#" class="text-muted me-2"><i class="fa-brands fa-twitter"></i></a>
+                    <a href="#" class="text-muted"><i class="fa-solid fa-globe"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm mentor-card text-center p-3">
+                <div class="position-relative mx-auto mb-3" style="width: 120px; height: 120px;">
+                    <img src="https://i.pravatar.cc/300?img=5" class="rounded-circle w-100 h-100 object-fit-cover border border-4 border-white shadow-sm">
+                    <span class="position-absolute bottom-0 end-0 bg-white p-1 rounded-circle shadow-sm" style="width: 30px; height: 30px;">
+                        <i class="fa-brands fa-amazon text-warning"></i>
+                    </span>
+                </div>
+                <h5 class="fw-bold mb-1">Sarah Jones</h5>
+                <small class="text-primary fw-bold text-uppercase" style="font-size: 0.7rem;">Data Scientist</small>
+                <p class="text-muted small mt-3">Machine Learning expert formerly at Amazon. Specializes in Python & AI.</p>
+                <div class="mt-auto pt-3 border-top">
+                    <a href="#" class="text-muted me-2"><i class="fa-brands fa-linkedin"></i></a>
+                    <a href="#" class="text-muted"><i class="fa-brands fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm mentor-card text-center p-3">
+                <div class="position-relative mx-auto mb-3" style="width: 120px; height: 120px;">
+                    <img src="https://i.pravatar.cc/300?img=3" class="rounded-circle w-100 h-100 object-fit-cover border border-4 border-white shadow-sm">
+                    <span class="position-absolute bottom-0 end-0 bg-white p-1 rounded-circle shadow-sm" style="width: 30px; height: 30px;">
+                        <i class="fa-brands fa-spotify text-success"></i>
+                    </span>
+                </div>
+                <h5 class="fw-bold mb-1">Michael Ross</h5>
+                <small class="text-primary fw-bold text-uppercase" style="font-size: 0.7rem;">UI/UX Designer</small>
+                <p class="text-muted small mt-3">Senior Product Designer helping students build beautiful interfaces.</p>
+                <div class="mt-auto pt-3 border-top">
+                    <a href="#" class="text-muted me-2"><i class="fa-brands fa-dribbble"></i></a>
+                    <a href="#" class="text-muted"><i class="fa-brands fa-behance"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm mentor-card text-center p-3">
+                <div class="position-relative mx-auto mb-3" style="width: 120px; height: 120px;">
+                    <img src="https://i.pravatar.cc/300?img=9" class="rounded-circle w-100 h-100 object-fit-cover border border-4 border-white shadow-sm">
+                    <span class="position-absolute bottom-0 end-0 bg-white p-1 rounded-circle shadow-sm" style="width: 30px; height: 30px;">
+                        <i class="fa-brands fa-microsoft text-primary"></i>
+                    </span>
+                </div>
+                <h5 class="fw-bold mb-1">Emily Blunt</h5>
+                <small class="text-primary fw-bold text-uppercase" style="font-size: 0.7rem;">DevOps Engineer</small>
+                <p class="text-muted small mt-3">Cloud Architect teaching AWS and Docker deployment strategies.</p>
+                <div class="mt-auto pt-3 border-top">
+                    <a href="#" class="text-muted me-2"><i class="fa-brands fa-linkedin"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-light rounded-4 p-5 mt-5 text-center">
+        <h3>Want to become a mentor?</h3>
+        <p class="text-muted">Join our community and share your knowledge with the world.</p>
+        <a href="{% url 'contact' %}" class="btn btn-outline-dark rounded-pill px-4 fw-bold">Apply Now</a>
+    </div>
+</div>
+
+<style>
+    .mentor-card {
+        border-radius: 20px;
+        transition: transform 0.3s ease;
+    }
+    .mentor-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}

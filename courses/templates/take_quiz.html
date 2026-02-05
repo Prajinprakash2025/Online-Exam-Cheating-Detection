@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* CSS Variables for this page */
+    :root {
+        --primary-dark: #2c3e50;
+        --primary-purple: #8e44ad;
+        --bg-cream: #f3f4f6;
+        --btn-hover: #732d91;
+    }
+
+    /* Interactive Quiz Options */
+    .quiz-option {
+        transition: all 0.2s ease;
+        border: 2px solid #dee2e6;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .quiz-option:hover {
+        background-color: #f8f9fa;
+        border-color: #adb5bd;
+    }
+
+    /* Active State styling */
+    .quiz-option:has(input:checked) {
+        border-color: var(--primary-purple);
+        background-color: rgba(142, 68, 173, 0.05);
+        color: var(--primary-purple);
+        font-weight: 600;
+        box-shadow: 0 4px 10px rgba(142, 68, 173, 0.1);
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-purple);
+        border-color: var(--primary-purple);
+    }
+    
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+
+    .btn-custom:hover {
+        background-color: var(--btn-hover);
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-center py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-7">
+                
+                <div class="mb-4">
+                    <a href="{% url 'course_viewer' video.course.id video.order %}" class="text-decoration-none fw-bold text-muted hover-underline">
+                        <i class="fa-solid fa-arrow-left me-2"></i> Back to Lesson
+                    </a>
+                </div>
+
+                <div class="card border-0 shadow-lg rounded-5 overflow-hidden">
+                    <div class="card-header p-5 text-center text-white border-0" style="background-color: var(--primary-dark);">
+                        <div class="mb-3 bg-white bg-opacity-10 p-3 rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                            <i class="fa-solid fa-pen-fancy fs-2 text-white"></i>
+                        </div>
+                        <h6 class="text-uppercase text-white-50 fw-bold ls-1 mb-2">Quiz Time</h6>
+                        <h3 class="fw-bold mb-0 text-white">{{ video.title }}</h3>
+                        <p class="mt-2 text-white-50 mb-0 small">Answer all questions correctly to proceed.</p>
+                    </div>
+
+                    <div class="card-body p-5">
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            {% for q in questions %}
+                            <div class="mb-5">
+                                <div class="d-flex gap-3 mb-4">
+                                    <span class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold flex-shrink-0 shadow-sm" 
+                                          style="width: 35px; height: 35px; background-color: var(--primary-purple);">
+                                        {{ forloop.counter }}
+                                    </span>
+                                    <h5 class="fw-bold mt-1" style="color: var(--primary-dark);">{{ q.question }}</h5>
+                                </div>
+                                
+                                <div class="d-flex flex-column gap-3 ms-md-5">
+                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
+                                        <input type="radio" name="question_{{ q.id }}" value="1" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;" required>
+                                        <span class="fs-6">{{ q.option_1 }}</span>
+                                    </label>
+
+                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
+                                        <input type="radio" name="question_{{ q.id }}" value="2" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;">
+                                        <span class="fs-6">{{ q.option_2 }}</span>
+                                    </label>
+
+                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
+                                        <input type="radio" name="question_{{ q.id }}" value="3" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;">
+                                        <span class="fs-6">{{ q.option_3 }}</span>
+                                    </label>
+                                    
+                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
+                                        <input type="radio" name="question_{{ q.id }}" value="4" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;">
+                                        <span class="fs-6">{{ q.option_4 }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-5">
+                                <div class="mb-3">
+                                    <i class="fa-solid fa-clipboard-question fs-1 text-muted opacity-25"></i>
+                                </div>
+                                <h6 class="fw-bold text-muted">No Questions Yet</h6>
+                                <p class="text-muted small mb-4">This quiz has no questions added.</p>
+                                <a href="{% url 'course_viewer' video.course.id video.order %}" class="btn btn-outline-dark rounded-pill px-4">Go Back</a>
+                            </div>
+                            {% endfor %}
+
+                            {% if questions %}
+                            <div class="d-grid mt-5 pt-3 border-top">
+                                <button type="submit" class="btn btn-custom rounded-pill py-3 fw-bold shadow-sm" style="font-size: 1.1rem;">
+                                    Submit Quiz <i class="fa-solid fa-paper-plane ms-2"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

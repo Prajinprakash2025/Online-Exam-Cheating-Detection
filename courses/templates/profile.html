@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-dark: #2c3e50;
+        --bg-cream: #f3f4f6;
+    }
+
+    .card {
+        border-radius: 20px;
+        transition: transform 0.2s;
+    }
+
+    .btn-outline-custom {
+        border: 2px solid var(--primary-purple);
+        color: var(--primary-purple);
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn-outline-custom:hover {
+        background-color: var(--primary-purple);
+        color: white;
+    }
+
+    .course-item {
+        transition: background-color 0.2s;
+    }
+    .course-item:hover {
+        background-color: #fcfcfc;
+    }
+</style>
+
+<div class="py-5" style="background-color: var(--bg-cream); min-height: 90vh;">
+    <div class="container">
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3 class="fw-bold mb-0" style="color: var(--primary-dark);">My Profile</h3>
+                <p class="text-muted">Manage your account and track your progress.</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-lg p-4 h-100 text-center">
+                    <div class="position-relative mx-auto mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border" style="width: 120px; height: 120px;">
+                            {% if user.is_superuser or user.is_instructor %}
+                                <i class="fa-solid fa-chalkboard-user text-muted" style="font-size: 3rem;"></i>
+                            {% else %}
+                                <i class="fa-solid fa-user-graduate text-muted" style="font-size: 3rem;"></i>
+                            {% endif %}
+                        </div>
+                        <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success border border-white p-2">
+                            <span class="visually-hidden">Active</span>
+                        </span>
+                    </div>
+                    
+                    <h4 class="fw-bold mb-1 text-dark">{{ user.first_name }} {{ user.last_name }}</h4>
+                    <p class="text-muted small mb-3">@{{ user.username }}</p>
+                    
+                    <div class="mb-4">
+                        {% if user.is_superuser %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill">Administrator</span>
+                        {% elif user.is_instructor %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-2 rounded-pill">Instructor</span>
+                        {% else %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill">Student</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-light rounded-pill fw-bold text-muted">
+                            <i class="fa-solid fa-gear me-2"></i>Settings
+                        </button>
+                        {% if user.is_superuser or user.is_instructor %}
+                            <a href="{% url 'instructor_dashboard' %}" class="btn btn-outline-custom rounded-pill">
+                                <i class="fa-solid fa-chart-line me-2"></i>Instructor Dashboard
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="fa-solid fa-book-open me-2 text-warning"></i> My Learning
+                        </h5>
+                        <span class="badge bg-light text-dark border">{{ enrolled_courses.count }} Courses</span>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        {% if enrolled_courses %}
+                            <div class="list-group list-group-flush">
+                                {% for enrollment in enrolled_courses %}
+                                    <div class="list-group-item p-4 border-0 border-bottom course-item">
+                                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                                            
+                                            <div class="d-flex align-items-center w-100">
+                                                <div class="rounded-3 bg-light border d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 60px; height: 60px;">
+                                                    {% if enrollment.course.thumbnail %}
+                                                        <img src="{{ enrollment.course.thumbnail.url }}" class="rounded-2" width="60" height="60" style="object-fit: cover;">
+                                                    {% else %}
+                                                        <i class="fa-solid fa-image text-muted fs-4"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold mb-1 text-dark">{{ enrollment.course.title }}</h6>
+                                                    <div class="d-flex align-items-center gap-3 text-muted small">
+                                                        <span><i class="fa-regular fa-calendar me-1"></i> {{ enrollment.enrolled_at|date:"M d, Y" }}</span>
+                                                        {% if enrollment.is_completed %}
+                                                            <span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Completed</span>
+                                                        {% else %}
+                                                            <span class="text-primary"><i class="fa-solid fa-spinner me-1"></i> In Progress</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="flex-shrink-0 w-100 w-md-auto text-end">
+                                                {% if enrollment.is_completed %}
+                                                    <a href="{% url 'certificate_view' enrollment.course.id %}" target="_blank" class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm">
+                                                        <i class="fa-solid fa-certificate me-2"></i> Certificate
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url 'course_viewer' enrollment.course.id enrollment.current_lesson_index %}" class="btn btn-sm btn-custom rounded-pill px-4 fw-bold shadow-sm">
+                                                        Continue Lesson {{ enrollment.current_lesson_index }}
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <div class="mb-3">
+                                    <i class="fa-solid fa-layer-group fa-3x text-muted opacity-25"></i>
+                                </div>
+                                <h6 class="fw-bold text-muted">No Active Courses</h6>
+                                <p class="text-muted small mb-4">You haven't enrolled in any courses yet.</p>
+                                <a href="{% url 'course_list' %}" class="btn btn-custom rounded-pill px-4 shadow-sm">
+                                    Browse Courses
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

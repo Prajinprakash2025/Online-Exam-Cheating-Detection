@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* VARIABLES */
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-dark: #2c3e50;
+        --bg-cream: #f3f4f6;
+    }
+
+    /* FORM STYLING */
+    .form-control {
+        border-radius: 50px;
+        padding: 0.8rem 1.2rem;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus {
+        background-color: white;
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        outline: none;
+    }
+
+    /* Dashed Upload Area */
+    .upload-area {
+        background-color: #fcfcfc;
+        border: 2px dashed #d1d5db;
+        border-radius: 20px;
+        transition: all 0.3s;
+    }
+    
+    .upload-area:hover {
+        background-color: #f8f0fc; /* Light purple tint */
+        border-color: var(--primary-purple);
+    }
+
+    /* Override standard file input styling slightly */
+    input[type="file"] {
+        background-color: transparent;
+        border: none;
+        padding: 0;
+    }
+
+    /* BUTTONS */
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+    .btn-custom:hover {
+        background-color: #732d91;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
+    <div class="container">
+        
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-10">
+                <a href="{% url 'instructor_dashboard' %}" class="text-decoration-none fw-bold text-muted mb-3 d-inline-block">
+                    <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            
+            <div class="col-lg-6 mb-4">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden h-100">
+                    <div class="card-header bg-white p-4 text-center border-0">
+                        <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                            <i class="fa-solid fa-cloud-arrow-up fs-3" style="color: var(--primary-purple);"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="color: var(--primary-dark);">
+                            {% if is_edit %}Edit Lesson{% else %}Upload New Lesson{% endif %}
+                        </h4>
+                        <p class="text-muted small mb-0">Course: <span class="fw-bold text-dark">{{ course.title }}</span></p>
+                    </div>
+                    
+                    <div class="card-body p-4 pt-0">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Lesson Title</label>
+                                {{ form.title }}
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Video File</label>
+                                <div class="upload-area p-4 text-center">
+                                    <div class="mb-3">
+                                        <i class="fa-solid fa-file-video fs-1 text-muted opacity-50"></i>
+                                    </div>
+                                    {{ form.video_file }}
+                                    <small class="d-block text-muted mt-3" style="font-size: 0.75rem;">
+                                        Supported formats: MP4, MOV, AVI, MKV
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Lesson Order</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted">#</span>
+                                    {{ form.order }}
+                                </div>
+                                <div class="form-text small ms-3">Position in the course (e.g., 1 for first lesson)</div>
+                            </div>
+
+                            <div class="d-grid gap-2 pt-2">
+                                <button type="submit" class="btn btn-custom rounded-pill py-3 fw-bold shadow-sm">
+                                    <i class="fa-solid fa-upload me-2"></i> 
+                                    {% if is_edit %}Update Lesson{% else %}Upload Video{% endif %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark">Course Content</h5>
+                        <span class="badge bg-light text-dark border rounded-pill">{{ course.videos.count }} Lessons</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush custom-scrollbar" style="max-height: 500px; overflow-y: auto;">
+                            {% for v in course.videos.all %}
+                                <div class="list-group-item p-3 border-0 border-bottom d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center overflow-hidden">
+                                        <span class="badge bg-light text-dark border me-3 rounded-pill" style="min-width: 30px;">{{ v.order }}</span>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 150px;">{{ v.title }}</h6>
+                                            {% if v.video_file %}
+                                                <small class="text-success"><i class="fa-solid fa-check-circle me-1"></i>Video Uploaded</small>
+                                            {% else %}
+                                                <small class="text-danger">No Video File</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm rounded-circle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+                                            <li><a class="dropdown-item" href="{% url 'edit_video' v.id %}"><i class="fa-solid fa-pen me-2 text-primary"></i> Edit</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'add_quiz' v.id %}"><i class="fa-solid fa-question me-2 text-warning"></i> Add Quiz</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="{% url 'delete_video' v.id %}" onclick="return confirm('Delete this video?');"><i class="fa-solid fa-trash me-2"></i> Delete</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="p-5 text-center">
+                                    <p class="text-muted mb-0 small">No lessons uploaded yet.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

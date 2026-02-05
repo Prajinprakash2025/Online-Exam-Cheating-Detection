@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* VARIABLES */
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-dark: #2c3e50;
+        --bg-cream: #f3f4f6;
+    }
+
+    /* FORM STYLING */
+    .form-control, .form-select {
+        border-radius: 50px;
+        padding: 0.8rem 1.2rem;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: white;
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        outline: none;
+    }
+
+    /* Textarea specific */
+    textarea.form-control {
+        border-radius: 20px;
+        min-height: 100px;
+    }
+
+    /* Input Group Labels (A, B, C, D) */
+    .input-group-text {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-right: none;
+        border-radius: 50px 0 0 50px;
+        padding-left: 20px;
+        color: var(--primary-purple);
+        font-weight: bold;
+    }
+    
+    /* Fix input border when next to group-text */
+    .input-group .form-control {
+        border-left: none;
+        border-radius: 0 50px 50px 0;
+    }
+
+    /* BUTTONS */
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+    .btn-custom:hover {
+        background-color: #732d91;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .btn-outline-custom {
+        border: 2px solid var(--primary-purple);
+        color: var(--primary-purple);
+        transition: all 0.3s;
+    }
+    .btn-outline-custom:hover {
+        background-color: var(--primary-purple);
+        color: white;
+    }
+</style>
+
+<div class="py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
+    <div class="container">
+        
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-8">
+                <a href="{% url 'instructor_dashboard' %}" class="text-decoration-none fw-bold text-muted mb-3 d-inline-block">
+                    <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-5">
+                    <div class="card-header bg-white p-4 text-center border-0">
+                        <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                            <i class="fa-solid fa-clipboard-question fs-3" style="color: var(--primary-purple);"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="color: var(--primary-dark);">Add Quiz Question</h4>
+                        <p class="text-muted small mb-0">For Lesson: <span class="fw-bold text-dark">{{ video.title }}</span></p>
+                    </div>
+
+                    <div class="card-body p-4 p-md-5 pt-0">
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Question Text</label>
+                                {{ form.question }}
+                            </div>
+
+                            <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Answer Options</label>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">A</span>
+                                        {{ form.option_1 }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">B</span>
+                                        {{ form.option_2 }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">C</span>
+                                        {{ form.option_3 }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">D</span>
+                                        {{ form.option_4 }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 rounded-4 mb-4" style="background-color: #f3e5f5; border: 2px dashed #ce93d8;">
+                                <div class="d-flex align-items-center justify-content-between px-2">
+                                    <label class="fw-bold text-dark mb-0">
+                                        <i class="fa-solid fa-check-circle me-2 text-success"></i>Correct Option (1-4)
+                                    </label>
+                                    <div style="width: 100px;">
+                                        {{ form.correct_option }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" name="save_and_add" value="true" class="btn btn-outline-custom w-50 rounded-pill py-3 fw-bold">
+                                    <i class="fa-solid fa-plus me-1"></i> Save & Add Another
+                                </button>
+
+                                <button type="submit" name="save_and_finish" value="true" class="btn btn-custom w-50 rounded-pill py-3 fw-bold shadow-sm">
+                                    Finish Quiz <i class="fa-solid fa-check ms-2"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark">Existing Questions</h5>
+                        <span class="badge bg-light text-dark rounded-pill border">{{ video.questions.count }} Questions</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for q in video.questions.all %}
+                                <div class="list-group-item p-4 border-0 border-bottom d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-start overflow-hidden">
+                                        <div class="badge bg-light text-dark border me-3 rounded-pill mt-1">Q{{ forloop.counter }}</div>
+                                        <div>
+                                            <p class="mb-1 fw-bold text-dark text-truncate" style="max-width: 400px;">{{ q.question }}</p>
+                                            <small class="text-muted">
+                                                <i class="fa-solid fa-check text-success me-1"></i> Correct Answer: Option {{ q.correct_option }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="ms-3">
+                                        <a href="{% url 'delete_quiz' q.id %}" class="btn btn-sm btn-light text-danger rounded-circle shadow-sm hover-shadow" 
+                                           style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;"
+                                           onclick="return confirm('Are you sure you want to delete this question?');"
+                                           title="Delete Question">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="p-5 text-center">
+                                    <i class="fa-solid fa-folder-open fs-1 text-muted opacity-25 mb-3"></i>
+                                    <p class="text-muted mb-0">No questions added to this lesson yet.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-dark: #2c3e50;
+        --bg-cream: #f3f4f6;
+    }
+    
+    /* Sidebar Styles */
+    .active-lesson {
+        background-color: var(--primary-dark) !important;
+        color: white !important;
+        border-left: 5px solid var(--primary-purple);
+    }
+    
+    .active-lesson .title-text { color: white; }
+    
+    .unlocked-lesson {
+        transition: all 0.2s;
+        background-color: white;
+        color: var(--primary-dark);
+        border-left: 5px solid transparent;
+    }
+    
+    .unlocked-lesson:hover {
+        background-color: #f8f9fa;
+        padding-left: 1.8rem !important; /* Subtle shift effect */
+        border-left-color: #ddd;
+    }
+
+    /* Scrollbar Polish */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--primary-purple); }
+    
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+    .btn-custom:hover {
+        background-color: #732d91;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div style="background-color: var(--primary-dark); padding: 3rem 0 5rem 0; margin-bottom: -4rem;">
+    <div class="container text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-white-50 text-uppercase fw-bold ls-1 mb-2 d-block">Current Course</small>
+                <h2 class="fw-bold mt-0 mb-0">{{ course.title }}</h2>
+            </div>
+            <a href="{% url 'profile' %}" class="btn btn-outline-light rounded-pill btn-sm px-4">
+                <i class="fa-solid fa-arrow-left me-2"></i> Back to Profile
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden mb-4" style="z-index: 10;">
+                
+                <div class="ratio ratio-16x9 bg-black">
+                    {% if video.video_file %}
+                        <video controls controlsList="nodownload" oncontextmenu="return false;" class="w-100 h-100">
+                            <source src="{{ video.video_file.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center h-100 text-white">
+                            <div class="text-center">
+                                <i class="fa-solid fa-video-slash fs-1 mb-3 opacity-50"></i>
+                                <p class="mb-0">Video source not found.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body p-4 p-md-5">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <span class="badge bg-light text-dark border fw-bold px-3 py-2 rounded-pill mb-3">
+                                Lesson {{ video.order }}
+                            </span>
+                            <h3 class="fw-bold text-dark mb-1">{{ video.title }}</h3>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted" style="line-height: 1.7;">
+                        In this lesson, we cover the fundamentals necessary to understand the core concepts of {{ course.title }}. Watch carefully and take the quiz below to proceed.
+                    </p>
+                    
+                    <hr class="my-4 opacity-10">
+                    
+                    {% if quiz %}
+                        <div class="quiz-card p-4 rounded-4 border-0 position-relative overflow-hidden d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(135deg, #f3e5f5 0%, #fff 100%); z-index: 0;"></div>
+                            
+                            <div class="position-relative" style="z-index: 1;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="icon-box bg-white shadow-sm text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="fa-solid fa-trophy fs-5" style="color: var(--primary-purple);"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-0 text-dark">Ready to level up?</h5>
+                                        <p class="mb-0 text-muted small">Complete the quiz to unlock the next lesson.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <a href="{% url 'take_quiz' video.id %}" class="btn btn-custom rounded-pill px-4 py-2 position-relative shadow-sm" style="z-index: 1;">
+                                Start Quiz <i class="fa-solid fa-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-between p-4 rounded-4 bg-light border-start border-4 border-success shadow-sm">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-white p-3 rounded-circle shadow-sm text-success">
+                                    <i class="fa-solid fa-check fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark">Lesson Content Only</h6>
+                                    <p class="mb-0 text-muted small">Click the button to mark this lesson as complete.</p>
+                                </div>
+                            </div>
+
+                            <a href="{% url 'complete_lesson' video.id %}" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
+                                {% if all_videos.count == video.order %}
+                                    Finish Course <i class="fa-solid fa-flag-checkered ms-2"></i>
+                                {% else %}
+                                    Mark Complete & Next <i class="fa-solid fa-arrow-right ms-2"></i>
+                                {% endif %}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            
+            {% if enrollment.is_completed %}
+                <div class="card border-0 bg-success text-white mb-4 shadow rounded-4 overflow-hidden">
+                    <div class="card-body p-4 text-center">
+                        <div class="mb-3 bg-white bg-opacity-25 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="fa-solid fa-certificate fs-2"></i>
+                        </div>
+                        <h4 class="fw-bold">Course Completed!</h4>
+                        <p class="opacity-75 small mb-4">Congratulations! You have passed all requirements.</p>
+                        <a href="{% url 'certificate_view' course.id %}" target="_blank" class="btn btn-light w-100 rounded-pill fw-bold text-success shadow-sm">
+                            <i class="fa-solid fa-download me-2"></i> Download Certificate
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="card shadow-sm border-0 rounded-4 overflow-hidden sticky-top" style="top: 100px; z-index: 10;">
+                <div class="card-header bg-white p-4 border-bottom">
+                    <h5 class="fw-bold mb-0" style="color: var(--primary-dark);">Course Content</h5>
+                    <small class="text-muted">{{ all_videos.count }} Lessons</small>
+                </div>
+                
+                <div class="list-group list-group-flush custom-scrollbar" style="max-height: 600px; overflow-y: auto;">
+                    {% for v in all_videos %}
+                        {% if v.order <= enrollment.current_lesson_index %}
+                            <a href="{% url 'course_viewer' course.id v.order %}" 
+                               class="list-group-item list-group-item-action border-0 py-3 px-4 d-flex align-items-center gap-3
+                               {% if v.id == video.id %}active-lesson{% else %}unlocked-lesson{% endif %}">
+                                
+                                <div class="status-icon">
+                                    {% if v.id == video.id %}
+                                        <i class="fa-solid fa-circle-play text-white"></i>
+                                    {% else %}
+                                        <i class="fa-solid fa-circle-check" style="color: var(--primary-purple);"></i>
+                                    {% endif %}
+                                </div>
+
+                                <div class="flex-grow-1">
+                                    <small class="d-block fw-bold text-uppercase mb-1 opacity-75" style="font-size: 0.7rem;">Lesson {{ v.order }}</small>
+                                    <h6 class="mb-0 fw-bold title-text">{{ v.title }}</h6>
+                                </div>
+
+                                {% if v.id == video.id %}
+                                    <div class="spinner-grow spinner-grow-sm text-white" role="status"></div>
+                                {% endif %}
+                            </a>
+                        {% else %}
+                            <div class="list-group-item border-0 py-3 px-4 d-flex align-items-center gap-3 bg-light text-muted opacity-75">
+                                <div class="status-icon">
+                                    <i class="fa-solid fa-lock text-secondary"></i>
+                                </div>
+                                <div>
+                                    <small class="d-block fw-bold text-uppercase mb-1" style="font-size: 0.7rem;">Lesson {{ v.order }}</small>
+                                    <h6 class="mb-0 fw-normal">{{ v.title }}</h6>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

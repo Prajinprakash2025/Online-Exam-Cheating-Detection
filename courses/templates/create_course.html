@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* VARIABLES */
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-dark: #2c3e50;
+        --bg-cream: #f3f4f6;
+    }
+
+    /* FORM STYLING */
+    .form-control {
+        border-radius: 50px;
+        padding: 0.8rem 1.2rem;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus {
+        background-color: white;
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        outline: none;
+    }
+    
+    /* Textarea specific styling */
+    textarea.form-control {
+        border-radius: 20px !important;
+        min-height: 120px;
+    }
+
+    /* Dashed Upload Area */
+    .upload-area {
+        background-color: #fcfcfc;
+        border: 2px dashed #d1d5db;
+        border-radius: 20px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        background-color: #f8f0fc; /* Light purple tint */
+        border-color: var(--primary-purple);
+    }
+
+    /* Override standard file input styling */
+    input[type="file"] {
+        background-color: transparent;
+        border: none;
+        padding: 0;
+        margin: 0 auto;
+        display: block;
+        width: 100%;
+    }
+
+    /* BUTTONS */
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+    .btn-custom:hover {
+        background-color: #732d91;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
+    <div class="container">
+        
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-6">
+                <a href="{% url 'instructor_dashboard' %}" class="text-decoration-none fw-bold text-muted mb-3 d-inline-block">
+                    <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="card-header bg-white p-4 text-center border-0">
+                        <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                            <i class="fa-solid fa-rocket fs-2" style="color: var(--primary-purple);"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="color: var(--primary-dark);">Launch New Course</h4>
+                        <p class="text-muted small mb-0">Create a space for your students to learn.</p>
+                    </div>
+
+                    <div class="card-body p-4 p-md-5 pt-0">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Course Title</label>
+                                {{ form.title }}
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Description</label>
+                                {{ form.description }}
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Course Thumbnail</label>
+                                <div class="upload-area p-4 text-center">
+                                    <div class="mb-3">
+                                        <i class="fa-regular fa-image fs-1 text-muted opacity-50"></i>
+                                    </div>
+                                    {{ form.thumbnail }}
+                                    <small class="d-block text-muted mt-3" style="font-size: 0.75rem;">
+                                        Recommended size: 1280x720 (JPG, PNG)
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 mt-5">
+                                <button type="submit" class="btn btn-custom rounded-pill py-3 fw-bold shadow-sm">
+                                    <i class="fa-solid fa-plus me-2"></i> Create Course
+                                </button>
+                                <a href="{% url 'instructor_dashboard' %}" class="btn btn-light rounded-pill py-3 fw-bold">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

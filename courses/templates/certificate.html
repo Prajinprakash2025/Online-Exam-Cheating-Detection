@@ -1,0 +1,231 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Certificate of Completion</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Pinyon+Script&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #555;
+            font-family: 'Libre Baskerville', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #certificate {
+            background-color: #fdfbf7; 
+            width: 1100px;
+            height: 750px;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            box-sizing: border-box; 
+            overflow: hidden; 
+        }
+
+        /* --- THE BORDER IMAGE --- */
+        .border-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; 
+            pointer-events: none; 
+        }
+        
+        .border-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill; 
+        }
+
+        /* --- CONTENT CONTAINER --- */
+        .content-layer {
+            position: relative;
+            z-index: 2; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            /* FIXED: Changed padding to pull everything up slightly */
+            /* Top padding reduced to 110px (was 130px) */
+            padding: 110px 120px 40px 120px; 
+            box-sizing: border-box;
+        }
+
+        /* --- TYPOGRAPHY --- */
+        
+        .script-text {
+            font-family: 'Pinyon Script', cursive;
+            font-size: 45px;
+            color: #555;
+            margin-top: 5px; 
+            margin-bottom: 10px;
+        }
+
+        .student-name {
+            font-family: 'Cinzel', serif;
+            font-size: 55px;
+            font-weight: 700;
+            color: #2c4a68; 
+            /* Reduced bottom margin to save space */
+            margin: 5px 0 10px 0;
+            padding: 0 40px;
+            border-bottom: 2px solid #ddd;
+            display: inline-block;
+            min-width: 500px;
+        }
+
+        .action-text {
+            font-size: 20px;
+            color: #444;
+            letter-spacing: 1px;
+            margin-bottom: 10px; /* Reduced slightly */
+            font-style: italic;
+        }
+
+        .course-title {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 38px;
+            font-weight: 700;
+            color: #1a1a1a;
+            /* Drastically reduced margin to pull footer up */
+            margin: 5px 0 20px 0; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- FOOTER --- */
+        .footer {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px; /* Reduced margin */
+            align-items: flex-end;
+        }
+
+        .signature-box {
+            text-align: left;
+            width: 250px;
+        }
+        
+        .signature-box.right {
+            text-align: right;
+        }
+
+        .date-text {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .date-value {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 16px;
+            color: #555;
+            border-bottom: 1px dotted #333;
+            padding-right: 20px;
+        }
+
+        /* --- BUTTON --- */
+        .download-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 40px;
+            background-color: #2c4a68;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+        
+        @media print { .download-btn { display: none; } }
+    </style>
+</head>
+<body>
+
+    <div id="certificate">
+        
+        <div class="border-overlay">
+            <img src="{% static 'images/border.png' %}" alt="Border">
+        </div>
+
+        <div class="content-layer">
+            
+            <div style="width: 100%; height: 200px; margin-bottom: -30px;">
+                <svg viewBox="0 0 1100 220" width="100%" height="100%">
+                    <path id="curve" d="M 100,180 Q 550,-20 1000,180" fill="transparent"/>
+                    <text width="1100">
+                        <textPath href="#curve" startOffset="50%" text-anchor="middle" 
+                                  style="font-family: 'Cinzel', serif; font-weight: 700; font-size: 55px; fill: #c5a059; letter-spacing: 3px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">
+                            Certificate of Completion
+                        </textPath>
+                    </text>
+                </svg>
+            </div>
+
+            <div class="script-text">This is to certify that</div>
+
+            <div class="student-name">
+                {{ enrollment.student.first_name }} {{ enrollment.student.last_name }}
+            </div>
+
+            <div class="action-text">has mastered the course</div>
+
+            <div class="course-title">
+                {{ course.title }}
+            </div>
+
+            <div class="footer">
+                <div class="signature-box">
+                    <span class="date-text">Date:</span> 
+                    <span class="date-value">{{ enrollment.completed_at|date:"F d, Y" }}</span>
+                </div>
+
+                <div style="width: 90px; height: 90px; border: 2px dashed #c5a059; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #c5a059; font-weight: bold; font-size: 11px; text-transform: uppercase; text-align: center; letter-spacing: 1px;">
+                    <div style="border: 1px solid #c5a059; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        Official<br>Seal
+                    </div>
+                </div>
+
+                <div class="signature-box right">
+                    <div style="font-family: 'Pinyon Script', cursive; font-size: 30px; margin-bottom: 5px;">Instructor Team</div>
+                    <div style="border-top: 1px solid #333; width: 200px; margin-left: auto;"></div>
+                    <div class="date-text" style="font-size: 14px; margin-top: 5px;">SkillStream Instructor</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <button class="download-btn" onclick="downloadPDF()">Download PDF</button>
+
+    <script>
+        function downloadPDF() {
+            const element = document.getElementById('certificate');
+            const opt = {
+                margin: 0,
+                filename: '{{ enrollment.student.first_name }}_Certificate.pdf',
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'px', format: [1100, 750], orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
+
+</body>
+</html>

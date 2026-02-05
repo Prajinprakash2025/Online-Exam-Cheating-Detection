@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* CSS Variables for this page */
+    :root {
+        --primary-dark: #2c3e50;
+        --primary-purple: #8e44ad;
+        --bg-cream: #f3f4f6;
+        --btn-hover: #732d91;
+    }
+
+    .hover-shadow:hover {
+        background-color: var(--bg-cream);
+        transform: translateY(-2px);
+        transition: all 0.2s;
+    }
+    
+    /* Input Focus State */
+    .form-control:focus {
+        background-color: white;
+        border-color: var(--primary-purple);
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        outline: none;
+    }
+    
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+
+    .btn-custom:hover {
+        background-color: var(--btn-hover);
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-center py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card border-0 shadow-lg rounded-5 overflow-hidden">
+                    <div class="row g-0">
+                        
+                        <div class="col-lg-5 d-none d-lg-flex flex-column align-items-center justify-content-center p-5 text-center text-white" 
+                             style="background-color: var(--primary-dark);">
+                            <div class="mb-4 bg-white bg-opacity-10 p-4 rounded-circle">
+                                <i class="fa-solid fa-graduation-cap display-4"></i>
+                            </div>
+                            <h2 class="fw-bold mb-2">Welcome Back!</h2>
+                            <p class="opacity-75 mb-4">To keep connected with us please login with your personal info.</p>
+                            <div style="width: 50px; height: 5px; background: var(--primary-purple); border-radius: 10px;"></div>
+                        </div>
+
+                        <div class="col-lg-7 bg-white p-5">
+                            <div class="text-center mb-5">
+                                <h3 class="fw-bold" style="color: var(--primary-dark);">Sign in to SkillStream</h3>
+                                <div class="d-flex justify-content-center gap-3 mt-3">
+                                    <a href="#" class="btn btn-light rounded-circle border hover-shadow" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-brands fa-google text-danger"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-light rounded-circle border hover-shadow" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-brands fa-facebook-f text-primary"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-light rounded-circle border hover-shadow" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-brands fa-linkedin-in text-info"></i>
+                                    </a>
+                                </div>
+                                <p class="text-muted small mt-3">or use your email account</p>
+                            </div>
+
+                            {% if form.errors %}
+                                <div class="alert alert-danger alert-dismissible fade show rounded-4 small" role="alert">
+                                    <i class="fa-solid fa-circle-exclamation me-2"></i>
+                                    Invalid username/email or password.
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endif %}
+
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3 position-relative">
+                                    <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
+                                        <i class="fa-regular fa-envelope"></i>
+                                    </span>
+                                    <input type="text" name="username" class="form-control form-control-lg bg-light border-0 rounded-pill ps-5" 
+                                           placeholder="Username or Email Address" required style="font-size: 0.95rem;">
+                                </div>
+
+                                <div class="mb-4 position-relative">
+                                    <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
+                                        <i class="fa-solid fa-lock"></i>
+                                    </span>
+                                    <input type="password" name="password" class="form-control form-control-lg bg-light border-0 rounded-pill ps-5" 
+                                           placeholder="Password" required style="font-size: 0.95rem;">
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mb-4 small">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="rememberMe">
+                                        <label class="form-check-label text-muted" for="rememberMe">Remember me</label>
+                                    </div>
+                                    <a href="#" class="text-decoration-none fw-bold" style="color: var(--primary-purple);">Forgot Password?</a>
+                                </div>
+
+                                <button type="submit" class="btn btn-custom w-100 rounded-pill py-3 fw-bold shadow-sm">
+                                    SIGN IN
+                                </button>
+
+                                <div class="text-center mt-4">
+                                    <p class="text-muted small">Don't have an account? 
+                                        <a href="{% url 'signup' %}" class="fw-bold text-decoration-none" style="color: var(--primary-purple);">Create Account</a>
+                                    </p>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
