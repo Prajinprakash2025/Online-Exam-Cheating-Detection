@@ -2,13 +2,14 @@
 
 {% block content %}
 <style>
+    /* VARIABLES */
     :root {
         --primary-purple: #8e44ad;
         --primary-dark: #2c3e50;
         --bg-cream: #f3f4f6;
     }
     
-    /* Sidebar Styles */
+    /* SIDEBAR STYLES */
     .active-lesson {
         background-color: var(--primary-dark) !important;
         color: white !important;
@@ -30,7 +31,7 @@
         border-left-color: #ddd;
     }
 
-    /* Scrollbar Polish */
+    /* SCROLLBAR POLISH */
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
@@ -45,6 +46,19 @@
         background-color: #732d91;
         color: white;
         transform: translateY(-2px);
+    }
+
+    /* --- STAR RATING STYLES --- */
+    .star-icon {
+        color: #e0e0e0; /* Default Grey */
+        cursor: pointer;
+        transition: color 0.2s, transform 0.1s;
+    }
+    .star-icon:hover {
+        transform: scale(1.1);
+    }
+    .text-gold {
+        color: #ffc107 !important; /* Gold Color */
     }
 </style>
 
@@ -91,6 +105,12 @@
                             </span>
                             <h3 class="fw-bold text-dark mb-1">{{ video.title }}</h3>
                         </div>
+
+                        {% if video.study_material %}
+                            <a href="{{ video.study_material.url }}" target="_blank" class="btn btn-outline-primary rounded-pill fw-bold shadow-sm">
+                                <i class="fa-solid fa-file-arrow-down me-2"></i> Download Notes
+                            </a>
+                        {% endif %}
                     </div>
                     
                     <p class="text-muted" style="line-height: 1.7;">
@@ -132,15 +152,151 @@
                             </div>
 
                             <a href="{% url 'complete_lesson' video.id %}" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
-                                {% if all_videos.count == video.order %}
-                                    Finish Course <i class="fa-solid fa-flag-checkered ms-2"></i>
-                                {% else %}
-                                    Mark Complete & Next <i class="fa-solid fa-arrow-right ms-2"></i>
-                                {% endif %}
+                                Mark Complete <i class="fa-solid fa-check ms-2"></i>
                             </a>
                         </div>
                     {% endif %}
                 </div>
+            </div>
+
+            <div class="mb-5">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <h4 class="fw-bold mb-0">Class Discussion</h4>
+                    <span class="badge bg-white text-muted border rounded-pill">{{ video.comments.count }} Posts</span>
+                </div>
+                
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                    <div class="d-flex gap-3">
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border fw-bold text-primary flex-shrink-0" style="width: 45px; height: 45px;">
+                            {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <form action="{% url 'add_comment' video.id %}" method="POST">
+                                {% csrf_token %}
+                                <div class="mb-2">
+                                    <textarea name="text" class="form-control rounded-4 bg-light border-0" rows="2" placeholder="Ask a question..." required style="resize: none;"></textarea>
+                                </div>
+                                <div class="text-end">
+                                    <button class="btn btn-sm btn-dark rounded-pill px-4 fw-bold">Post Question</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column gap-3">
+                    {% for comment in video.comments.all reversed %}
+                        {% if not comment.parent %}
+                            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                                <div class="d-flex gap-3">
+                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border text-muted flex-shrink-0" style="width: 40px; height: 40px;">
+                                        {{ comment.user.first_name|slice:":1" }}{{ comment.user.last_name|slice:":1" }}
+                                    </div>
+                                    
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <h6 class="fw-bold mb-0 text-dark">{{ comment.user.first_name }} {{ comment.user.last_name }}</h6>
+                                            <small class="text-muted ms-auto" style="font-size: 0.75rem;">{{ comment.created_at|timesince }} ago</small>
+                                        </div>
+                                        <p class="text-dark mb-2 small opacity-75">{{ comment.text }}</p>
+                                        
+                                        <button class="btn btn-link text-decoration-none p-0 text-muted small fw-bold" 
+                                                onclick="toggleReplyForm('reply-form-{{ comment.id }}')">
+                                            <i class="fa-solid fa-reply me-1"></i> Reply
+                                        </button>
+
+                                        <div id="reply-form-{{ comment.id }}" class="mt-3 d-none">
+                                            <form action="{% url 'reply_comment' video.id comment.id %}" method="POST" class="d-flex gap-2">
+                                                {% csrf_token %}
+                                                <input type="text" name="text" class="form-control form-control-sm rounded-pill bg-light border-0" placeholder="Write a reply..." required>
+                                                <button class="btn btn-sm btn-primary rounded-pill px-3">Send</button>
+                                            </form>
+                                        </div>
+
+                                        {% if comment.replies.all %}
+                                            <div class="mt-3 ps-3 border-start border-3 border-light">
+                                                {% for reply in comment.replies.all %}
+                                                    <div class="d-flex gap-2 mb-2">
+                                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border text-muted flex-shrink-0" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                                            {{ reply.user.first_name|slice:":1" }}{{ reply.user.last_name|slice:":1" }}
+                                                        </div>
+                                                        <div>
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="fw-bold text-dark small">{{ reply.user.first_name }}</span>
+                                                                {% if reply.user.is_instructor %}
+                                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-1" style="font-size: 0.6rem;">Instructor</span>
+                                                                {% endif %}
+                                                                <small class="text-muted" style="font-size: 0.7rem;">{{ reply.created_at|timesince }} ago</small>
+                                                            </div>
+                                                            <p class="text-dark mb-0 small opacity-75">{{ reply.text }}</p>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% empty %}
+                        <div class="text-center py-4 text-muted bg-light rounded-4">
+                            <i class="fa-regular fa-comments fs-2 mb-2 opacity-25"></i>
+                            <p class="small mb-0">No questions yet. Be the first to ask!</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-5">
+                <h4 class="fw-bold mb-4">Student Reviews</h4>
+                
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-light">
+                    <h6 class="fw-bold mb-3">Leave a Review</h6>
+                    
+                    <form action="{% url 'add_review' course.id %}" method="POST">
+                        {% csrf_token %}
+                        
+                        <input type="hidden" name="rating" id="ratingInput" required>
+
+                        <div class="mb-3">
+                            <label class="small text-muted fw-bold d-block mb-2">Rating</label>
+                            <div class="star-rating d-inline-flex gap-2">
+                                <i class="fa-solid fa-star fs-3 star-icon" data-value="1"></i>
+                                <i class="fa-solid fa-star fs-3 star-icon" data-value="2"></i>
+                                <i class="fa-solid fa-star fs-3 star-icon" data-value="3"></i>
+                                <i class="fa-solid fa-star fs-3 star-icon" data-value="4"></i>
+                                <i class="fa-solid fa-star fs-3 star-icon" data-value="5"></i>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <textarea name="comment" class="form-control rounded-4" rows="3" placeholder="How was the course? (Optional)" required></textarea>
+                        </div>
+                        
+                        <button class="btn btn-primary rounded-pill px-4 fw-bold">Submit Review</button>
+                    </form>
+                </div>
+
+                {% for review in course.reviews.all %}
+                    <div class="card border-0 border-bottom mb-3">
+                        <div class="card-body px-0">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold mb-0">{{ review.user.first_name }} {{ review.user.last_name }}</h6>
+                                <small class="text-muted">{{ review.created_at|date:"M d, Y" }}</small>
+                            </div>
+                            <div class="text-warning mb-2">
+                                {% if review.rating == 5 %}⭐⭐⭐⭐⭐
+                                {% elif review.rating == 4 %}⭐⭐⭐⭐
+                                {% elif review.rating == 3 %}⭐⭐⭐
+                                {% elif review.rating == 2 %}⭐⭐
+                                {% else %}⭐{% endif %}
+                            </div>
+                            <p class="text-muted mb-0">{{ review.comment }}</p>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted fst-italic">No reviews yet. Be the first!</p>
+                {% endfor %}
             </div>
         </div>
         
@@ -154,6 +310,7 @@
                         </div>
                         <h4 class="fw-bold">Course Completed!</h4>
                         <p class="opacity-75 small mb-4">Congratulations! You have passed all requirements.</p>
+                        
                         <a href="{% url 'certificate_view' course.id %}" target="_blank" class="btn btn-light w-100 rounded-pill fw-bold text-success shadow-sm">
                             <i class="fa-solid fa-download me-2"></i> Download Certificate
                         </a>
@@ -208,4 +365,52 @@
         </div>
     </div>
 </div>
+
+<script>
+    // --- 1. STAR RATING LOGIC ---
+    const stars = document.querySelectorAll('.star-icon');
+    const ratingInput = document.getElementById('ratingInput');
+
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const value = this.getAttribute('data-value');
+            ratingInput.value = value;
+            updateStars(value);
+        });
+
+        star.addEventListener('mouseover', function() {
+            const value = this.getAttribute('data-value');
+            updateStars(value);
+        });
+    });
+
+    document.querySelector('.star-rating').addEventListener('mouseleave', function() {
+        const currentValue = ratingInput.value || 0;
+        updateStars(currentValue);
+    });
+
+    function updateStars(value) {
+        stars.forEach(s => {
+            if (s.getAttribute('data-value') <= value) {
+                s.classList.add('text-gold');
+                s.style.color = '#ffc107';
+            } else {
+                s.classList.remove('text-gold');
+                s.style.color = '#e0e0e0';
+            }
+        });
+    }
+
+    // --- 2. REPLY FORM TOGGLE LOGIC ---
+    function toggleReplyForm(formId) {
+        var form = document.getElementById(formId);
+        if (form.classList.contains('d-none')) {
+            form.classList.remove('d-none');
+            form.querySelector('input').focus(); // Auto-focus the input
+        } else {
+            form.classList.add('d-none');
+        }
+    }
+</script>
+
 {% endblock %}

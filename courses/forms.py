@@ -17,16 +17,29 @@ class CourseForm(forms.ModelForm):
             'thumbnail': forms.FileInput(attrs={'class': 'form-control rounded-pill px-4'}),
         }
 
-# 2. Video/Lesson Form
+# courses/forms.py
+from django import forms
+from .models import Course, Video, Quiz, User
+
+# ... (StudentSignupForm and CourseForm remain the same) ...
+
+# courses/forms.py
+
 class VideoForm(forms.ModelForm):
     class Meta:
         model = Video
-        fields = ['title', 'video_file', 'order']
+        # ✅ CHANGED: Back to 'study_material'
+        fields = ['title', 'video_file', 'study_material', 'order']
+        
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control rounded-pill px-3', 'placeholder': 'Video Title'}),
             'video_file': forms.FileInput(attrs={'class': 'form-control rounded-pill px-3 py-2'}),
             'order': forms.NumberInput(attrs={'class': 'form-control rounded-pill px-3', 'placeholder': 'Order (e.g. 1)'}),
+            
+            # ✅ CHANGED: File Input for PDF
+            'study_material': forms.FileInput(attrs={'class': 'form-control rounded-pill px-3 py-2'}),
         }
+# ... (QuizForm remains the same) ...
 
 # 3. Quiz Creation Form
 class QuizForm(forms.ModelForm):
@@ -113,3 +126,34 @@ class StudentSignupForm(UserCreationForm):
                 'class': 'form-control rounded-pill px-4 py-2', 
                 'placeholder': 'Choose a Username'
             })
+
+# courses/forms.py
+from .models import Review  # <--- Make sure to import Review at the top
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.Select(attrs={'class': 'form-select rounded-pill px-3'}),
+            'comment': forms.Textarea(attrs={
+                'class': 'form-control rounded-4 px-3 py-2', 
+                'rows': 3, 
+                'placeholder': 'Write your review here...'
+            }),
+        }
+
+# courses/forms.py
+from .models import Comment  # <--- Add Comment to imports
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['text']
+        widgets = {
+            'text': forms.Textarea(attrs={
+                'class': 'form-control rounded-4 px-3 py-2', 
+                'rows': 3, 
+                'placeholder': 'Ask a question or share your thoughts...'
+            }),
+        }

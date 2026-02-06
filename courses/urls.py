@@ -2,11 +2,13 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
+from django.contrib.auth import views as auth_views 
 
 urlpatterns = [
     # --- General Pages ---
     path('', views.home, name='home'),
     path('profile/', views.profile_view, name='profile'),
+    path('profile/edit/', views.edit_profile_view, name='edit_profile'),
     path('dashboard/', views.instructor_dashboard, name='instructor_dashboard'),
 
     # --- Authentication ---
@@ -27,7 +29,7 @@ urlpatterns = [
 
     path('mentors/', views.mentors, name='mentors'),
     path('contact/', views.contact, name='contact'),
-    path('courses/', views.course_list, name='course_list'), # New separate page
+    path('courses/', views.course_list, name='course_list'), 
 
     path('video/<int:video_id>/delete/', views.delete_video, name='delete_video'),
     path('video/<int:video_id>/edit/', views.edit_video, name='edit_video'),
@@ -38,13 +40,27 @@ urlpatterns = [
     # STUDENT MANAGEMENT
     path('student/<int:student_id>/view/', views.student_detail, name='student_detail'),
     path('student/<int:student_id>/delete/', views.delete_student, name='delete_student'),
-    path('students/', views.student_list, name='student_list'), # <--- ADD THIS
+    path('students/', views.student_list, name='student_list'), 
+
+    # --- OTP VERIFICATION (SIGNUP) ---
+    # This expects 6 digits (Don't touch this)
     path('verify-otp/', views.verify_otp, name='verify_otp'),
+
     path('course/<int:course_id>/certificate/', views.certificate_view, name='certificate_view'),
     path('video/<int:video_id>/complete/', views.complete_lesson, name='complete_lesson'),
 
+    # --- FORGOT PASSWORD FLOW ---
+    path('forgot-password/', views.forgot_password_view, name='forgot_password'),
+    
+    # ✅ FIX: Changed URL to 'verify-reset-code/' to avoid conflict with Signup
+    path('verify-reset-code/', views.verify_otp_view, name='enter_otp'),
+    
+    path('reset-new-password/', views.reset_new_password_view, name='reset_new_password'),
+    path('course/<int:course_id>/review/', views.add_review, name='add_review'),
+    path('video/<int:video_id>/comment/', views.add_comment, name='add_comment'),
+    path('video/<int:video_id>/comment/<int:parent_id>/', views.add_comment, name='reply_comment'),
 ]
 
-# --- Media File Configuration (Fixes broken images) ---
+# --- Media File Configuration ---
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

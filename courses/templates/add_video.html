@@ -107,6 +107,19 @@
                             </div>
 
                             <div class="mb-4">
+                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Study Material (PDF)</label>
+                                <div class="upload-area p-3 text-center" style="border-color: #e0e0e0; background-color: #fff;">
+                                    <div class="d-flex align-items-center justify-content-center gap-3">
+                                        <i class="fa-solid fa-file-pdf fs-2 text-danger opacity-75"></i>
+                                        <div class="text-start">
+                                            <input type="file" name="study_material" class="form-control border-0 bg-transparent ps-0" accept=".pdf,.docx,.txt">
+                                        </div>
+                                    </div>
+                                    <small class="d-block text-muted mt-1" style="font-size: 0.75rem;">Optional: Upload notes for students</small>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
                                 <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Lesson Order</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted">#</span>
@@ -144,6 +157,12 @@
                                                 <small class="text-success"><i class="fa-solid fa-check-circle me-1"></i>Video Uploaded</small>
                                             {% else %}
                                                 <small class="text-danger">No Video File</small>
+                                            {% endif %}
+                                            
+                                            {% if v.study_material %}
+                                                <div style="font-size: 0.7rem;" class="text-primary mt-1">
+                                                    <i class="fa-solid fa-paperclip me-1"></i> PDF Attached
+                                                </div>
                                             {% endif %}
                                         </div>
                                     </div>

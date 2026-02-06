@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 600px;">
+    <div class="card shadow border-0 rounded-4 p-4">
+        <div class="d-flex align-items-center mb-4">
+            <a href="{% url 'profile' %}" class="btn btn-light rounded-circle me-3">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <h3 class="fw-bold mb-0">Edit Profile</h3>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small text-muted">First Name</label>
+                    <input type="text" name="first_name" class="form-control rounded-pill" value="{{ user.first_name }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small text-muted">Last Name</label>
+                    <input type="text" name="last_name" class="form-control rounded-pill" value="{{ user.last_name }}">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold small text-muted">Email Address</label>
+                <input type="email" name="email" class="form-control rounded-pill" value="{{ user.email }}">
+            </div>
+
+            <button class="btn btn-custom w-100 rounded-pill py-2 text-white fw-bold shadow-sm" style="background-color: #8e44ad;">
+                Save Changes
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

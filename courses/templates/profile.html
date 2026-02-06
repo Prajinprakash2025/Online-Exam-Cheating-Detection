@@ -4,156 +4,203 @@
 <style>
     :root {
         --primary-purple: #8e44ad;
-        --primary-dark: #2c3e50;
-        --bg-cream: #f3f4f6;
+        --purple-light: #9b59b6;
+        --purple-soft: #f4ecf7;
+        --text-dark: #2c3e50;
+        --text-muted: #6c757d;
+        --bg-light: #f8f9fa;
     }
 
-    .card {
-        border-radius: 20px;
-        transition: transform 0.2s;
+    body {
+        background-color: var(--bg-light);
     }
 
-    .btn-outline-custom {
-        border: 2px solid var(--primary-purple);
-        color: var(--primary-purple);
+    /* Profile Card Styling */
+    .profile-card {
+        border: none;
+        border-radius: 16px;
+        background: white;
+        transition: transform 0.3s ease;
+    }
+    
+    .avatar-circle {
+        width: 130px; 
+        height: 130px;
+        border: 4px solid white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+
+    /* Course Card Styling */
+    .course-card {
+        border: none;
+        border-radius: 12px;
+        background: white;
+        transition: all 0.3s ease;
+        border-left: 5px solid transparent;
+    }
+    
+    .course-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        border-left: 5px solid var(--primary-purple);
+    }
+
+    .course-thumb {
+        width: 140px;
+        height: 90px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .btn-action {
+        padding: 8px 24px;
         font-weight: 600;
+        border-radius: 50px;
         transition: all 0.2s;
     }
-    .btn-outline-custom:hover {
-        background-color: var(--primary-purple);
-        color: white;
-    }
 
-    .course-item {
-        transition: background-color 0.2s;
-    }
-    .course-item:hover {
-        background-color: #fcfcfc;
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #edf2f7;
     }
 </style>
 
-<div class="py-5" style="background-color: var(--bg-cream); min-height: 90vh;">
-    <div class="container">
+<div class="container py-5">
+    
+    <div class="row mb-5 align-items-end">
+        <div class="col-md-8">
+            <h6 class="text-uppercase text-muted fw-bold small ls-1 mb-2">Overview</h6>
+            <h2 class="fw-bold text-dark display-6">Welcome back, {{ user.first_name }}! 👋</h2>
+            <p class="text-muted mb-0">Here is your learning dashboard.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+             <div class="d-inline-flex align-items-center bg-white rounded-pill shadow-sm px-4 py-2">
+                <i class="fa-solid fa-trophy text-warning me-2"></i>
+                <span class="fw-bold text-dark">{{ enrolled_courses.count }}</span>
+                <span class="text-muted ms-1">Active Courses</span>
+             </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
         
-        <div class="row mb-4">
-            <div class="col-12">
-                <h3 class="fw-bold mb-0" style="color: var(--primary-dark);">My Profile</h3>
-                <p class="text-muted">Manage your account and track your progress.</p>
+        <div class="col-lg-4">
+            <div class="card profile-card shadow-sm h-100 p-4 text-center position-relative overflow-hidden">
+                <div class="position-absolute top-0 start-0 w-100" style="height: 100px; background: linear-gradient(to right, #8e44ad, #9b59b6);"></div>
+                
+                <div class="position-relative mt-4 mb-3">
+                    <div class="avatar-circle rounded-circle d-flex align-items-center justify-content-center mx-auto text-secondary display-4 fw-bold">
+                        {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+                    </div>
+                </div>
+
+                <h4 class="fw-bold mb-0">{{ user.first_name }} {{ user.last_name }}</h4>
+                <p class="text-muted small mb-3">{{ user.email }}</p>
+
+                <div class="mb-4">
+                    {% if user.is_superuser %}
+                        <span class="badge bg-danger px-3 py-2 rounded-pill">Admin Access</span>
+                    {% elif user.is_instructor %}
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">Instructor</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">Student Account</span>
+                    {% endif %}
+                </div>
+
+                <hr class="border-light my-4">
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'edit_profile' %}" class="btn btn-outline-secondary btn-action">
+                        <i class="fa-solid fa-gear me-2"></i> Edit Profile
+                    </a>
+                    
+                    {% if user.is_superuser or user.is_instructor %}
+                        <a href="{% url 'instructor_dashboard' %}" class="btn btn-dark btn-action">
+                            <i class="fa-solid fa-chart-pie me-2"></i> Dashboard
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <div class="row g-4">
-            
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-lg p-4 h-100 text-center">
-                    <div class="position-relative mx-auto mb-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border" style="width: 120px; height: 120px;">
-                            {% if user.is_superuser or user.is_instructor %}
-                                <i class="fa-solid fa-chalkboard-user text-muted" style="font-size: 3rem;"></i>
-                            {% else %}
-                                <i class="fa-solid fa-user-graduate text-muted" style="font-size: 3rem;"></i>
-                            {% endif %}
-                        </div>
-                        <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success border border-white p-2">
-                            <span class="visually-hidden">Active</span>
-                        </span>
-                    </div>
-                    
-                    <h4 class="fw-bold mb-1 text-dark">{{ user.first_name }} {{ user.last_name }}</h4>
-                    <p class="text-muted small mb-3">@{{ user.username }}</p>
-                    
-                    <div class="mb-4">
-                        {% if user.is_superuser %}
-                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill">Administrator</span>
-                        {% elif user.is_instructor %}
-                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-2 rounded-pill">Instructor</span>
-                        {% else %}
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill">Student</span>
-                        {% endif %}
-                    </div>
+        <div class="col-lg-8">
+            <h5 class="fw-bold mb-4 ps-2 border-start border-4 border-primary">My Courses</h5>
 
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-light rounded-pill fw-bold text-muted">
-                            <i class="fa-solid fa-gear me-2"></i>Settings
-                        </button>
-                        {% if user.is_superuser or user.is_instructor %}
-                            <a href="{% url 'instructor_dashboard' %}" class="btn btn-outline-custom rounded-pill">
-                                <i class="fa-solid fa-chart-line me-2"></i>Instructor Dashboard
-                            </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-8">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="fw-bold mb-0 text-dark">
-                            <i class="fa-solid fa-book-open me-2 text-warning"></i> My Learning
-                        </h5>
-                        <span class="badge bg-light text-dark border">{{ enrolled_courses.count }} Courses</span>
-                    </div>
-                    
-                    <div class="card-body p-0">
-                        {% if enrolled_courses %}
-                            <div class="list-group list-group-flush">
-                                {% for enrollment in enrolled_courses %}
-                                    <div class="list-group-item p-4 border-0 border-bottom course-item">
-                                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-                                            
-                                            <div class="d-flex align-items-center w-100">
-                                                <div class="rounded-3 bg-light border d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 60px; height: 60px;">
-                                                    {% if enrollment.course.thumbnail %}
-                                                        <img src="{{ enrollment.course.thumbnail.url }}" class="rounded-2" width="60" height="60" style="object-fit: cover;">
-                                                    {% else %}
-                                                        <i class="fa-solid fa-image text-muted fs-4"></i>
-                                                    {% endif %}
-                                                </div>
-                                                <div>
-                                                    <h6 class="fw-bold mb-1 text-dark">{{ enrollment.course.title }}</h6>
-                                                    <div class="d-flex align-items-center gap-3 text-muted small">
-                                                        <span><i class="fa-regular fa-calendar me-1"></i> {{ enrollment.enrolled_at|date:"M d, Y" }}</span>
-                                                        {% if enrollment.is_completed %}
-                                                            <span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Completed</span>
-                                                        {% else %}
-                                                            <span class="text-primary"><i class="fa-solid fa-spinner me-1"></i> In Progress</span>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="flex-shrink-0 w-100 w-md-auto text-end">
-                                                {% if enrollment.is_completed %}
-                                                    <a href="{% url 'certificate_view' enrollment.course.id %}" target="_blank" class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm">
-                                                        <i class="fa-solid fa-certificate me-2"></i> Certificate
-                                                    </a>
-                                                {% else %}
-                                                    <a href="{% url 'course_viewer' enrollment.course.id enrollment.current_lesson_index %}" class="btn btn-sm btn-custom rounded-pill px-4 fw-bold shadow-sm">
-                                                        Continue Lesson {{ enrollment.current_lesson_index }}
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-
+            {% if enrolled_courses %}
+                <div class="d-flex flex-column gap-3">
+                    {% for enrollment in enrolled_courses %}
+                        <div class="card course-card shadow-sm p-3">
+                            <div class="d-flex flex-column flex-md-row gap-4 align-items-center">
+                                
+                                <div class="flex-shrink-0">
+                                    {% if enrollment.course.thumbnail %}
+                                        <img src="{{ enrollment.course.thumbnail.url }}" class="course-thumb shadow-sm" alt="Course">
+                                    {% else %}
+                                        <div class="course-thumb bg-light d-flex align-items-center justify-content-center border">
+                                            <i class="fa-solid fa-image text-muted fs-3"></i>
                                         </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-center py-5">
-                                <div class="mb-3">
-                                    <i class="fa-solid fa-layer-group fa-3x text-muted opacity-25"></i>
+                                    {% endif %}
                                 </div>
-                                <h6 class="fw-bold text-muted">No Active Courses</h6>
-                                <p class="text-muted small mb-4">You haven't enrolled in any courses yet.</p>
-                                <a href="{% url 'course_list' %}" class="btn btn-custom rounded-pill px-4 shadow-sm">
-                                    Browse Courses
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
 
+                                <div class="flex-grow-1 w-100">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="fw-bold mb-0 text-dark">{{ enrollment.course.title }}</h5>
+                                        {% if enrollment.is_completed %}
+                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">
+                                                <i class="fa-solid fa-check me-1"></i> Completed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">
+                                                In Progress
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-3 mb-3">
+                                        <div class="progress flex-grow-1">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {% if enrollment.is_completed %}100%{% else %}35%{% endif %};">
+                                            </div>
+                                        </div>
+                                        <span class="small text-muted fw-bold">
+                                            {% if enrollment.is_completed %}100%{% else %}35%{% endif %}
+                                        </span>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fa-regular fa-calendar me-1"></i> Enrolled: {{ enrollment.enrolled_at|date:"M d, Y" }}
+                                        </small>
+                                        
+                                        {% if enrollment.is_completed %}
+                                            <a href="{% url 'certificate_view' enrollment.course.id %}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-4 fw-bold">
+                                                Download Certificate <i class="fa-solid fa-download ms-1"></i>
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'course_viewer' enrollment.course.id enrollment.current_lesson_index %}" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold" style="background: var(--primary-purple); border:none;">
+                                                Continue Learning
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5 bg-white rounded-4 shadow-sm">
+                    <div class="mb-3">
+                        <img src="https://cdn-icons-png.flaticon.com/512/7486/7486747.png" width="80" alt="No courses" style="opacity: 0.5;">
+                    </div>
+                    <h5 class="fw-bold text-dark">No courses yet</h5>
+                    <p class="text-muted mb-4">Start your learning journey today!</p>
+                    <a href="{% url 'course_list' %}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold" style="background: var(--primary-purple); border:none;">
+                        Browse Catalog
+                    </a>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
