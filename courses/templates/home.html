@@ -99,6 +99,48 @@
     </div>
 </div>
 
+<div class="container py-5" id="exams">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="fw-bold display-6 text-dark"><i class="fa-solid fa-shield-halved text-danger me-2"></i> AI Proctored Exams</h2>
+            <p class="text-muted">Test your knowledge in our secure, behavior-monitored environment.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% for exam in exams %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm course-card overflow-hidden" style="border-top: 4px solid var(--primary-purple) !important;">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">
+                            <i class="fa-solid fa-stopwatch me-1"></i> {{ exam.duration_minutes }} Mins
+                        </span>
+                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                            <i class="fa-solid fa-camera-web me-1"></i> Live Tracking
+                        </span>
+                    </div>
+                    
+                    <h5 class="fw-bold text-dark mb-1">{{ exam.title }}</h5>
+                    <p class="text-muted small mb-4">Course: {{ exam.course.title }}</p>
+
+                    <div class="mt-auto pt-3 border-top">
+                        <a href="{% url 'take_exam' exam.id %}" class="btn btn-custom w-100 rounded-pill fw-bold py-2 shadow-sm">
+                            Enter Exam Room <i class="fa-solid fa-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="bg-light p-4 rounded-4 text-center">
+                <p class="text-muted mb-0">No active exams available at the moment.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 <div class="container py-5" id="courses">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-end mb-5">
         <div>

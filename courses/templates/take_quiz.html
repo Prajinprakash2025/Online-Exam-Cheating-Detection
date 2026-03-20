@@ -1,135 +1,183 @@
 {% extends 'base.html' %}
-
 {% block content %}
+
 <style>
-    /* CSS Variables for this page */
-    :root {
-        --primary-dark: #2c3e50;
-        --primary-purple: #8e44ad;
-        --bg-cream: #f3f4f6;
-        --btn-hover: #732d91;
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.4; }
+        100% { opacity: 1; }
     }
-
-    /* Interactive Quiz Options */
-    .quiz-option {
-        transition: all 0.2s ease;
-        border: 2px solid #dee2e6;
-        cursor: pointer;
-        position: relative;
-    }
-    
-    .quiz-option:hover {
-        background-color: #f8f9fa;
-        border-color: #adb5bd;
-    }
-
-    /* Active State styling */
-    .quiz-option:has(input:checked) {
-        border-color: var(--primary-purple);
-        background-color: rgba(142, 68, 173, 0.05);
-        color: var(--primary-purple);
-        font-weight: 600;
-        box-shadow: 0 4px 10px rgba(142, 68, 173, 0.1);
-    }
-
-    .form-check-input:checked {
-        background-color: var(--primary-purple);
-        border-color: var(--primary-purple);
-    }
-    
-    .btn-custom {
-        background-color: var(--primary-purple);
-        color: white;
-        transition: all 0.3s;
-    }
-
-    .btn-custom:hover {
-        background-color: var(--btn-hover);
-        color: white;
-        transform: translateY(-2px);
+    .recording-dot {
+        animation: pulse 1.5s infinite;
     }
 </style>
 
-<div class="d-flex align-items-center justify-content-center py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-7">
-                
-                <div class="mb-4">
-                    <a href="{% url 'course_viewer' video.course.id video.order %}" class="text-decoration-none fw-bold text-muted hover-underline">
-                        <i class="fa-solid fa-arrow-left me-2"></i> Back to Lesson
-                    </a>
-                </div>
+<div class="container mt-5 mb-5">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="fw-bolder mb-0" style="color: var(--primary-dark);">Quiz: {{ video.title }}</h2>
+            </div>
+            
+            <div class="alert alert-danger shadow-sm rounded-3 border-0 border-start border-danger border-4 fw-bold mb-4">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i> AI Proctoring Active: Do not leave the camera frame or switch tabs.
+            </div>
 
-                <div class="card border-0 shadow-lg rounded-5 overflow-hidden">
-                    <div class="card-header p-5 text-center text-white border-0" style="background-color: var(--primary-dark);">
-                        <div class="mb-3 bg-white bg-opacity-10 p-3 rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
-                            <i class="fa-solid fa-pen-fancy fs-2 text-white"></i>
-                        </div>
-                        <h6 class="text-uppercase text-white-50 fw-bold ls-1 mb-2">Quiz Time</h6>
-                        <h3 class="fw-bold mb-0 text-white">{{ video.title }}</h3>
-                        <p class="mt-2 text-white-50 mb-0 small">Answer all questions correctly to proceed.</p>
-                    </div>
-
-                    <div class="card-body p-5">
-                        <form method="post">
-                            {% csrf_token %}
+            <form id="quizForm" method="POST" action="">
+                {% csrf_token %}
+                {% for q in questions %}
+                    <div class="card mb-4 shadow-sm border-0 rounded-4">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4" style="color: var(--primary-dark);">
+                                <span class="text-muted me-2">{{ forloop.counter }}.</span> {{ q.question }}
+                            </h5>
                             
-                            {% for q in questions %}
-                            <div class="mb-5">
-                                <div class="d-flex gap-3 mb-4">
-                                    <span class="d-flex align-items-center justify-content-center rounded-circle text-white fw-bold flex-shrink-0 shadow-sm" 
-                                          style="width: 35px; height: 35px; background-color: var(--primary-purple);">
-                                        {{ forloop.counter }}
-                                    </span>
-                                    <h5 class="fw-bold mt-1" style="color: var(--primary-dark);">{{ q.question }}</h5>
-                                </div>
-                                
-                                <div class="d-flex flex-column gap-3 ms-md-5">
-                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
-                                        <input type="radio" name="question_{{ q.id }}" value="1" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;" required>
-                                        <span class="fs-6">{{ q.option_1 }}</span>
-                                    </label>
-
-                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
-                                        <input type="radio" name="question_{{ q.id }}" value="2" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;">
-                                        <span class="fs-6">{{ q.option_2 }}</span>
-                                    </label>
-
-                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
-                                        <input type="radio" name="question_{{ q.id }}" value="3" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;">
-                                        <span class="fs-6">{{ q.option_3 }}</span>
-                                    </label>
-                                    
-                                    <label class="quiz-option p-3 rounded-4 d-flex align-items-center">
-                                        <input type="radio" name="question_{{ q.id }}" value="4" class="form-check-input me-3 flex-shrink-0" style="width: 1.2em; height: 1.2em;">
-                                        <span class="fs-6">{{ q.option_4 }}</span>
-                                    </label>
-                                </div>
+                            <div class="form-check mb-3 ms-2">
+                                <input class="form-check-input" type="radio" name="question_{{ q.id }}" id="q{{q.id}}opt1" value="1" required>
+                                <label class="form-check-label text-secondary fw-semibold" for="q{{q.id}}opt1">{{ q.option_1 }}</label>
                             </div>
-                            {% empty %}
-                            <div class="text-center py-5">
-                                <div class="mb-3">
-                                    <i class="fa-solid fa-clipboard-question fs-1 text-muted opacity-25"></i>
-                                </div>
-                                <h6 class="fw-bold text-muted">No Questions Yet</h6>
-                                <p class="text-muted small mb-4">This quiz has no questions added.</p>
-                                <a href="{% url 'course_viewer' video.course.id video.order %}" class="btn btn-outline-dark rounded-pill px-4">Go Back</a>
+                            <div class="form-check mb-3 ms-2">
+                                <input class="form-check-input" type="radio" name="question_{{ q.id }}" id="q{{q.id}}opt2" value="2">
+                                <label class="form-check-label text-secondary fw-semibold" for="q{{q.id}}opt2">{{ q.option_2 }}</label>
                             </div>
-                            {% endfor %}
-
-                            {% if questions %}
-                            <div class="d-grid mt-5 pt-3 border-top">
-                                <button type="submit" class="btn btn-custom rounded-pill py-3 fw-bold shadow-sm" style="font-size: 1.1rem;">
-                                    Submit Quiz <i class="fa-solid fa-paper-plane ms-2"></i>
-                                </button>
+                            <div class="form-check mb-3 ms-2">
+                                <input class="form-check-input" type="radio" name="question_{{ q.id }}" id="q{{q.id}}opt3" value="3">
+                                <label class="form-check-label text-secondary fw-semibold" for="q{{q.id}}opt3">{{ q.option_3 }}</label>
                             </div>
-                            {% endif %}
-                        </form>
+                            <div class="form-check mb-2 ms-2">
+                                <input class="form-check-input" type="radio" name="question_{{ q.id }}" id="q{{q.id}}opt4" value="4">
+                                <label class="form-check-label text-secondary fw-semibold" for="q{{q.id}}opt4">{{ q.option_4 }}</label>
+                            </div>
+                        </div>
                     </div>
+                {% endfor %}
+                <button type="submit" class="btn w-100 rounded-pill px-4 py-3 fw-bold shadow-sm mt-2 text-white" style="background-color: var(--primary-purple); font-size: 1.1rem;">
+                    Submit Answers
+                </button>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-lg rounded-4 sticky-top" style="top: 100px;">
+                <div class="card-body p-4 text-center bg-light rounded-4">
+                    
+                    <h6 class="fw-bold text-uppercase text-muted ls-1 mb-2">Time Remaining</h6>
+                    <h1 id="timerDisplay" class="text-danger fw-bolder display-4 mb-4" style="font-variant-numeric: tabular-nums;">--:--</h1>
+                    
+                    <hr class="mb-4 opacity-25">
+                    
+                    <h6 class="fw-bold text-dark mb-3">
+                        <i class="fa-solid fa-camera text-success me-2"></i>Live Proctoring
+                    </h6>
+                    
+                    <div class="position-relative overflow-hidden rounded-4 shadow-sm bg-dark" style="border: 3px solid #198754; min-height: 200px;">
+                        <video id="webcam" autoplay playsinline width="100%" class="d-block"></video>
+                        <span class="position-absolute top-0 end-0 m-2 badge bg-danger shadow-sm recording-dot px-2 py-1">
+                            <i class="fa-solid fa-circle text-white" style="font-size: 0.5rem; vertical-align: middle; margin-right: 3px;"></i> REC
+                        </span>
+                    </div>
+                    
+                    <canvas id="captureCanvas" style="display: none;"></canvas>
+                    
+                    <small class="text-muted d-block mt-3 fw-semibold">
+                        <i class="fa-solid fa-robot text-primary me-1"></i> AI Behaviour Analysis Active
+                    </small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // ==========================================
+    // 1. COUNTDOWN TIMER LOGIC
+    // ==========================================
+    let timeLeft = {{ remaining_time }};
+    const timerDisplay = document.getElementById('timerDisplay');
+    const quizForm = document.getElementById('quizForm');
+
+    function updateTimer() {
+        if (timeLeft <= 0) {
+            timerDisplay.innerText = "00:00";
+            alert("Time is up! Submitting your quiz automatically...");
+            quizForm.submit(); 
+        } else {
+            let minutes = Math.floor(timeLeft / 60);
+            let seconds = Math.floor(timeLeft % 60);
+            timerDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            timeLeft--;
+            setTimeout(updateTimer, 1000);
+        }
+    }
+    updateTimer();
+
+    // ==========================================
+    // 2. WEBCAM ACCESS LOGIC
+    // ==========================================
+    const videoElement = document.getElementById('webcam');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+            videoElement.srcObject = stream;
+        })
+        .catch(function(err) {
+            alert("Webcam access is required for this Proctored Quiz! Please allow camera permissions.");
+            console.error("Camera error:", err);
+        });
+
+    // ==========================================
+    // 3. AI FRAME CAPTURE & AJAX LOGIC
+    // ==========================================
+    const canvasElement = document.getElementById('captureCanvas');
+    const context = canvasElement.getContext('2d');
+    const captureInterval = 5000; // Snap a picture every 5 seconds
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function captureAndSendFrame() {
+        if (!videoElement.videoWidth) return; 
+
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+        
+        context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+        const imageData = canvasElement.toDataURL('image/jpeg', 0.8);
+
+        // Send to the new Quiz Session endpoint
+        fetch(`/quiz/session/{{ session.id }}/process_frame/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ image: imageData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.violation) {
+                console.warn("AI Alert:", data.message);
+                // Optional: Show a warning banner to the student here if desired
+            }
+        })
+        .catch(error => console.error("Error sending frame:", error));
+    }
+
+    videoElement.addEventListener('play', () => {
+        setInterval(captureAndSendFrame, captureInterval);
+    });
+</script>
+
 {% endblock %}

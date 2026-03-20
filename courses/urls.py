@@ -24,20 +24,19 @@ urlpatterns = [
     # --- Student: Watching & Quizzing ---
     path('course/<int:course_id>/lesson/<int:video_order>/', views.course_viewer, name='course_viewer'),
     
-    # CRITICAL FIX: This allows the "Take Quiz" button to work
+    # CRITICAL FIX: This allows the "Take Quiz" button to work (Now includes AI Proctoring!)
     path('video/<int:video_id>/take-quiz/', views.take_quiz, name='take_quiz'),
 
     path('mentors/', views.mentors, name='mentors'),
     path('contact/', views.contact, name='contact'),
     path('courses/', views.course_list, name='course_list'), 
 
+    # --- Video & Quiz Management ---
     path('video/<int:video_id>/delete/', views.delete_video, name='delete_video'),
     path('video/<int:video_id>/edit/', views.edit_video, name='edit_video'),
-
-    # QUIZ MANAGEMENT
     path('quiz/<int:quiz_id>/delete/', views.delete_quiz, name='delete_quiz'),
     
-    # STUDENT MANAGEMENT
+    # --- Student Management ---
     path('student/<int:student_id>/view/', views.student_detail, name='student_detail'),
     path('student/<int:student_id>/delete/', views.delete_student, name='delete_student'),
     path('students/', views.student_list, name='student_list'), 
@@ -59,6 +58,17 @@ urlpatterns = [
     path('course/<int:course_id>/review/', views.add_review, name='add_review'),
     path('video/<int:video_id>/comment/', views.add_comment, name='add_comment'),
     path('video/<int:video_id>/comment/<int:parent_id>/', views.add_comment, name='reply_comment'),
+
+    # ==========================================================
+    # 🚀 AI PROCTORING & QUIZ SESSIONS (UPDATED)
+    # ==========================================================
+    
+    # The background URL that receives the webcam snapshots from the student
+    path('quiz/session/<int:session_id>/process_frame/', views.process_quiz_frame, name='process_frame'),
+    
+    # Instructor Dashboard URLs to review flagged students
+    path('instructor/proctoring/', views.admin_proctoring_dashboard, name='admin_proctoring_dashboard'),
+    path('instructor/proctoring/review/<int:session_id>/', views.review_quiz_session, name='review_quiz_session'),
 ]
 
 # --- Media File Configuration ---

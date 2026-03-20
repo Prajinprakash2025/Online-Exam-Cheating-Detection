@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h6 class="text-uppercase fw-bold text-muted ls-1 mb-1">Proctoring Review</h6>
+            <h3 class="fw-bolder mb-0" style="color: var(--primary-dark);">Evaluate Session</h3>
+        </div>
+        <a href="{% url 'instructor_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4 fw-bold">
+            <i class="fa-solid fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 mb-4 sticky-top" style="top: 20px;">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4" style="color: var(--primary-dark);">Session Details</h5>
+                    
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 45px; height: 45px;">
+                            <i class="fa-solid fa-user text-secondary fs-5"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 text-muted small text-uppercase fw-bold">Student</p>
+                            <h6 class="fw-bold mb-0">{{ session.student.username }}</h6>
+                        </div>
+                    </div>
+
+                    <div class="bg-light rounded-4 p-3 mb-4">
+                        <p class="mb-2 text-muted small text-uppercase fw-bold">Quiz Lesson</p>
+                        <p class="mb-2 fw-semibold text-dark">{{ session.video.title }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                            <span class="text-muted small text-uppercase fw-bold">Score</span>
+                            <span class="fw-bolder fs-5 {% if session.score >= 75 %}text-success{% else %}text-danger{% endif %}">{{ session.score }}%</span>
+                        </div>
+                    </div>
+
+                    <p class="mb-4"><strong>Status:</strong>
+                        {% if session.status == 'flagged' %}<span class="badge bg-warning text-dark px-3 py-2 rounded-pill ms-2">Flagged for Review</span>
+                        {% elif session.status == 'disqualified' %}<span class="badge bg-danger px-3 py-2 rounded-pill ms-2">Disqualified</span>
+                        {% else %}<span class="badge bg-success px-3 py-2 rounded-pill ms-2">Submitted / Approved</span>{% endif %}
+                    </p>
+                    
+                    <hr class="mb-4 opacity-25">
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark">Instructor Notes</label>
+                            <textarea name="admin_notes" class="form-control rounded-4 p-3 bg-light border-0" rows="3" placeholder="Add your notes about this decision here...">{{ session.admin_notes|default_if_none:"" }}</textarea>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="action" value="approve" class="btn btn-success rounded-pill fw-bold py-2 shadow-sm">
+                                <i class="fa-solid fa-check-circle me-2"></i>Approve Result
+                            </button>
+                            <button type="submit" name="action" value="disqualify" class="btn btn-danger rounded-pill fw-bold py-2 shadow-sm">
+                                <i class="fa-solid fa-ban me-2"></i>Disqualify Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-camera text-danger me-2"></i> AI Evidence Logs</h5>
+                    <span class="badge bg-danger rounded-pill fs-6 px-3 py-2">{{ logs.count }} Violations</span>
+                </div>
+                <div class="card-body p-4 bg-light">
+                    <div class="row g-4">
+                        {% for log in logs %}
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100" style="border-top: 4px solid #dc3545 !important;">
+                                {% if log.evidence_image %}
+                                    <img src="{{ log.evidence_image.url }}" class="card-img-top" alt="Evidence snapshot" style="height: 220px; object-fit: cover;">
+                                {% else %}
+                                    <div class="card-body text-center bg-white" style="height: 220px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                                        <i class="fa-solid fa-image-slash text-muted opacity-25" style="font-size: 3rem; margin-bottom: 10px;"></i>
+                                        <span class="text-muted fw-semibold">No Image Available</span>
+                                    </div>
+                                {% endif %}
+                                <div class="card-body bg-white p-3">
+                                    <h6 class="fw-bold text-danger mb-2">{{ log.get_violation_type_display }}</h6>
+                                    <div class="d-flex justify-content-between align-items-center text-muted small">
+                                        <span><i class="fa-regular fa-clock me-1"></i> {{ log.timestamp|time:"H:i:s" }}</span>
+                                        <span>Confidence: <strong class="text-dark">{{ log.confidence_score|default:"N/A" }}</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center py-5 my-4">
+                            <div class="bg-white p-5 rounded-4 shadow-sm d-inline-block">
+                                <i class="fa-solid fa-shield-check text-success mb-3" style="font-size: 4rem;"></i>
+                                <h4 class="fw-bold text-dark">No Violations Detected</h4>
+                                <p class="mb-0 text-muted">The AI did not flag any suspicious behavior during this session. The student followed all rules!</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

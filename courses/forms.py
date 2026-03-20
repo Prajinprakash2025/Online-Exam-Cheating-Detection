@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import Course, Video, Quiz, User
+from .models import Course, Video, Quiz, User, Review, Comment
 
 # ------------------------------------------------------------------
 # INSTRUCTOR / ADMIN FORMS
@@ -17,29 +17,18 @@ class CourseForm(forms.ModelForm):
             'thumbnail': forms.FileInput(attrs={'class': 'form-control rounded-pill px-4'}),
         }
 
-# courses/forms.py
-from django import forms
-from .models import Course, Video, Quiz, User
-
-# ... (StudentSignupForm and CourseForm remain the same) ...
-
-# courses/forms.py
-
+# 2. Video & Material Form
 class VideoForm(forms.ModelForm):
     class Meta:
         model = Video
-        # ✅ CHANGED: Back to 'study_material'
         fields = ['title', 'video_file', 'study_material', 'order']
         
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control rounded-pill px-3', 'placeholder': 'Video Title'}),
             'video_file': forms.FileInput(attrs={'class': 'form-control rounded-pill px-3 py-2'}),
             'order': forms.NumberInput(attrs={'class': 'form-control rounded-pill px-3', 'placeholder': 'Order (e.g. 1)'}),
-            
-            # ✅ CHANGED: File Input for PDF
             'study_material': forms.FileInput(attrs={'class': 'form-control rounded-pill px-3 py-2'}),
         }
-# ... (QuizForm remains the same) ...
 
 # 3. Quiz Creation Form
 class QuizForm(forms.ModelForm):
@@ -99,7 +88,6 @@ class StudentSignupForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = User
-        # Note: We don't list password1/2 here because UserCreationForm handles them automatically
         fields = ('first_name', 'last_name', 'username', 'email', 'phone_number', 'age', 'roll_no', 'course_interest')
 
     # 3. Style the Password AND Username Fields
@@ -120,15 +108,16 @@ class StudentSignupForm(UserCreationForm):
                 'placeholder': 'Confirm Password'
             })
 
-        # Style Username (This fixes the ugly black box)
+        # Style Username
         if 'username' in self.fields:
             self.fields['username'].widget.attrs.update({
                 'class': 'form-control rounded-pill px-4 py-2', 
                 'placeholder': 'Choose a Username'
             })
 
-# courses/forms.py
-from .models import Review  # <--- Make sure to import Review at the top
+# ------------------------------------------------------------------
+# INTERACTION FORMS
+# ------------------------------------------------------------------
 
 class ReviewForm(forms.ModelForm):
     class Meta:
@@ -142,9 +131,6 @@ class ReviewForm(forms.ModelForm):
                 'placeholder': 'Write your review here...'
             }),
         }
-
-# courses/forms.py
-from .models import Comment  # <--- Add Comment to imports
 
 class CommentForm(forms.ModelForm):
     class Meta:

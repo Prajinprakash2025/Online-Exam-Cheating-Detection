@@ -1,16 +1,18 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
+from django.conf import settings
+from django.utils import timezone
 
-
-# courses/models.py
-
+# ------------------------------------------------------------------
+# USER MODEL
+# ------------------------------------------------------------------
 class User(AbstractUser):
     is_instructor = models.BooleanField(default=False)
     is_student = models.BooleanField(default=True)
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
     
-    # NEW FIELDS ADDED HERE
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     age = models.PositiveIntegerField(blank=True, null=True)
     roll_no = models.CharField(max_length=20, unique=True, blank=True, null=True, help_text="Your Student ID")
@@ -19,7 +21,10 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+
+# ------------------------------------------------------------------
 # CONTENT MODELS
+# ------------------------------------------------------------------
 class Course(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -29,34 +34,22 @@ class Course(models.Model):
     def __str__(self):
         return self.title
 
-# models.py
-# courses/models.py
-# courses/models.py
-from django.db import models
-from django.core.validators import FileExtensionValidator
-
-# courses/models.py
-
 class Video(models.Model):
-    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='videos')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='videos')
     title = models.CharField(max_length=200)
     
-    # Video File
     video_file = models.FileField(
         upload_to='course_videos/',
         validators=[FileExtensionValidator(allowed_extensions=['mp4', 'mov', 'avi', 'mkv'])],
         help_text="Upload a video file (mp4, mov, avi, mkv)"
     )
     
-    # ✅ RESTORED: Study Material (File Upload)
     study_material = models.FileField(
         upload_to='materials/', 
         blank=True, 
         null=True,
         help_text="Upload PDF notes for students"
     )
-    
-    # ❌ REMOVED: summary = models.TextField(...)
     
     order = models.PositiveIntegerField(help_text="Lesson order: 1, 2, 3...")
 
@@ -65,9 +58,12 @@ class Video(models.Model):
 
     def __str__(self):
         return f"{self.order}. {self.title}"
-    
+
+
+# ------------------------------------------------------------------
+# QUIZ & INTERACTION MODELS
+# ------------------------------------------------------------------
 class Quiz(models.Model):
-    # CHANGE THIS LINE: from OneToOneField to ForeignKey
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='questions')
     
     question = models.TextField()
@@ -79,31 +75,43 @@ class Quiz(models.Model):
 
     def __str__(self):
         return f"Question: {self.question[:50]}"
-import uuid # <--- Add this at the very top of models.py
 
-# ... your other models ...
+class Review(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)]) 
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
-# courses/models.py
-import uuid  # <--- CRITICAL: You must import this for uuid4() to work
-from django.db import models
-from django.conf import settings
-# ... (Keep your other imports like Course, Video, User) ...
+    def __str__(self):
+        return f"{self.user.username} - {self.course.title} ({self.rating} stars)"
+    
+class Comment(models.Model):
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.user.username} - {self.video.title}"
+
+
+# ------------------------------------------------------------------
+# TRACKING & ENROLLMENT MODELS
+# ------------------------------------------------------------------
 class Enrollment(models.Model):
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enrollments')
-    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='enrolled_students')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrolled_students')
     enrolled_at = models.DateTimeField(auto_now_add=True)
     current_lesson_index = models.PositiveIntegerField(default=1) 
     
-    # === NEW FIELDS FOR CERTIFICATE ===
     is_completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
     certificate_id = models.CharField(max_length=50, blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        # Auto-generate ID only if completed and ID doesn't exist yet
         if self.is_completed and not self.certificate_id:
-            # Generate a unique certificate ID (e.g., CERT-1A2B3C4D)
             self.certificate_id = f"CERT-{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
 
@@ -112,32 +120,56 @@ class Enrollment(models.Model):
 
 class Progress(models.Model):
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    video = models.ForeignKey('Video', on_delete=models.CASCADE)
+    video = models.ForeignKey(Video, on_delete=models.CASCADE)
     passed = models.BooleanField(default=False)
 
-# courses/models.py
 
-class Review(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)]) # 1 to 5 stars
-    comment = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+# ------------------------------------------------------------------
+# AI PROCTORING & QUIZ SESSION MODELS
+# ------------------------------------------------------------------
+class QuizSession(models.Model):
+    """
+    Tracks a student's active proctored attempt at a Video's Quiz. 
+    """
+    STATUS_CHOICES = (
+        ('ongoing', 'Ongoing'),
+        ('submitted', 'Submitted'),
+        ('flagged', 'Flagged for Review'),
+        ('disqualified', 'Disqualified'),
+    )
+
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quiz_sessions')
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='proctored_sessions')
+    start_time = models.DateTimeField(default=timezone.now)
+    end_time = models.DateTimeField(null=True, blank=True)
+    score = models.FloatField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ongoing')
+    
+    is_reviewed = models.BooleanField(default=False)
+    admin_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.course.title} ({self.rating} stars)"
-    
-# courses/models.py
+        return f"{self.student.username} - {self.video.title} Quiz ({self.status})"
 
-class Comment(models.Model):
-    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+class ProctoringLog(models.Model):
+    """
+    Stores the output from the Behaviour Analysis Engine (OpenCV/MediaPipe).
+    """
+    VIOLATION_TYPES = (
+        ('no_face', 'Face Absence'),
+        ('multi_face', 'Multiple Persons Detected'),
+        ('gaze_deviation', 'Eye Gaze Deviation'),
+        ('head_pose', 'Suspicious Head Movement'),
+        ('tab_switch', 'Browser Tab Switch'),
+        ('phone_detected', 'Mobile Phone Detected'),
+    )
+
+    session = models.ForeignKey(QuizSession, on_delete=models.CASCADE, related_name='proctoring_logs')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    violation_type = models.CharField(max_length=30, choices=VIOLATION_TYPES)
     
-    # 1. ADD THIS NEW FIELD
-    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
-    
-    text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    confidence_score = models.FloatField(null=True, blank=True)
+    evidence_image = models.ImageField(upload_to='proctoring_evidence/', blank=True, null=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.video.title}"
+        return f"{self.get_violation_type_display()} at {self.timestamp.strftime('%H:%M:%S')}"
