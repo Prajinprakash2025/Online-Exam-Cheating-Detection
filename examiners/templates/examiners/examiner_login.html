@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --eg-purple: #8e44ad;
+        --eg-dark: #2c3e50;
+        --eg-bg: #f0f2f5;
+        --glass-bg: rgba(255, 255, 255, 0.95);
+    }
+
+    body {
+        background-color: var(--eg-bg);
+        margin: 0;
+        padding: 0;
+    }
+
+    .auth-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+    }
+
+    .auth-card {
+        background: var(--glass-bg);
+        border-radius: 30px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        width: 100%;
+        max-width: 1000px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(20px);
+    }
+
+    /* Left Side: Branded Hero (using same assets as signup for consistency) */
+    .auth-hero {
+        flex: 1;
+        background: linear-gradient(135deg, rgba(44, 62, 80, 0.9) 0%, rgba(142, 68, 173, 0.8) 100%), 
+                    url("{% static 'img/examiner_signup_hero.png' %}");
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        display: none;
+        padding: 60px;
+        color: white;
+    }
+
+    @media (min-width: 992px) {
+        .auth-hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+    }
+
+    .brand-logo {
+        background: white;
+        color: var(--eg-purple);
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 15px;
+        font-weight: 800;
+        font-size: 1.5rem;
+        margin: 0 auto 2rem auto;
+    }
+
+    .hero-content h1 {
+        font-weight: 800;
+        font-size: 2.5rem;
+        line-height: 1.1;
+        letter-spacing: -1px;
+        margin-bottom: 1rem;
+    }
+
+    /* Right Side: Form */
+    .auth-form-side {
+        flex: 1.2;
+        padding: 60px;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .form-header h2 {
+        color: var(--eg-dark);
+        font-weight: 800;
+        font-size: 2rem;
+        margin-bottom: 8px;
+    }
+
+    .form-header p {
+        color: #64748b;
+    }
+
+    /* Universal Input Styling */
+    input, .form-control {
+        width: 100%;
+        padding: 14px 20px;
+        background-color: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 14px;
+        font-weight: 600;
+        color: var(--eg-dark);
+        transition: all 0.3s;
+        font-size: 0.95rem;
+        outline: none;
+    }
+
+    input:focus, .form-control:focus {
+        background-color: white;
+        border-color: var(--eg-purple);
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .form-label {
+        font-weight: 700;
+        color: var(--eg-dark);
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+        display: block;
+        margin-left: 4px;
+    }
+
+    .btn-submit {
+        background: var(--eg-purple);
+        color: white;
+        border: none;
+        padding: 16px;
+        border-radius: 14px;
+        font-weight: 800;
+        font-size: 1rem;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+        margin-top: 10px;
+        box-shadow: 0 10px 15px -3px rgba(142, 68, 173, 0.3);
+    }
+
+    .btn-submit:hover {
+        background: #732d91;
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(142, 68, 173, 0.5);
+        color: white;
+    }
+
+    .link-footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .link-footer a {
+        color: var(--eg-purple);
+        text-decoration: none;
+        font-weight: 800;
+    }
+</style>
+
+<div class="auth-page">
+    <div class="auth-card">
+        
+        <!-- Hero Section -->
+        <div class="auth-hero">
+            <a href="{% url 'home' %}" class="brand-logo text-decoration-none shadow-sm">EG</a>
+            <div class="hero-content">
+                <h1>Welcome Back, <br>Conductor</h1>
+                <p class="opacity-75">Sign in to manage your entire examination platform, certify teachers, and analyze global proctoring results.</p>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="auth-form-side">
+            <div class="form-header">
+                <h2>Master Conductor Access</h2>
+                <p>Sign in to your administration dashboard</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label">Admin Email</label>
+                    <input type="email" name="email" placeholder="Enter your registered email" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Secure Password</label>
+                    <input type="password" name="password" placeholder="••••••••" required>
+                </div>
+
+                <div class="d-flex justify-content-end mb-4">
+                    <a href="#" class="text-muted small fw-bold text-decoration-none">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-submit w-100">
+                    LOG IN TO MASTER CONSOLE <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
+                </button>
+
+                <div class="link-footer">
+                    Organization not registered? <a href="{% url 'examiner_signup' %}">Apply for Access</a>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

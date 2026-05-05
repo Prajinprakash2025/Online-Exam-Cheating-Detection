@@ -1,0 +1,791 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block footer %}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-dark: #2c3e50;
+        --primary-purple: #8e44ad;
+        --primary-teal: #1abc9c;
+        --sidebar-width: 280px;
+        --bg-light: #f8fafc;
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-purple {
+        background-color: var(--primary-purple);
+        color: white !important;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-purple:hover {
+        background-color: #7d3c98;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+    }
+
+    .btn-teal {
+        background-color: var(--primary-teal);
+        color: white !important;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-teal:hover {
+        background-color: #16a085;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+    }
+
+    body {
+        background-color: var(--bg-light);
+    }
+
+    /* Sidebar Styling */
+    .dashboard-container {
+        display: flex;
+        min-height: calc(100vh - 70px);
+    }
+
+    .dashboard-sidebar {
+        width: var(--sidebar-width);
+        background: white;
+        border-right: 1px solid #e2e8f0;
+        padding: 2rem 1.5rem;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        height: calc(100vh - 70px);
+    }
+
+    .sidebar-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0.875rem 1.25rem;
+        color: #64748b;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+    }
+
+    .sidebar-link:hover {
+        background: #f1f5f9;
+        color: var(--primary-teal);
+    }
+
+    .sidebar-link.active {
+        background: rgba(26, 188, 156, 0.1);
+        color: var(--primary-teal);
+    }
+
+    /* Main Content Styling */
+    .dashboard-main {
+        flex-grow: 1;
+        padding: 2rem 3rem;
+        overflow-y: auto;
+    }
+
+    /* Section Handling */
+    .dashboard-section {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .dashboard-section.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 24px;
+        box-shadow: var(--card-shadow);
+    }
+
+    .table-custom th {
+        background: #f8fafc;
+        border: none;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem 1.5rem;
+    }
+
+    .table-custom td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 20px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .btn-teal {
+        background-color: var(--primary-teal);
+        color: white !important;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-teal:hover {
+        background-color: #16a085;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+    }
+
+    .btn-purple {
+        background-color: var(--primary-purple);
+        color: white !important;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-purple:hover {
+        background-color: #7d3c98;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <nav class="dashboard-sidebar shadow-sm">
+        <div class="mb-5 px-3">
+            <h5 class="fw-bold mb-0">Teacher <span class="text-teal" style="color: var(--primary-teal)">Portal</span></h5>
+            <small class="text-muted">Assessment Expert</small>
+        </div>
+
+        <div class="nav-links">
+            <a onclick="switchSection('overview', this)" class="sidebar-link active">
+                <i class="fa-solid fa-gauge-high"></i> Overview
+            </a>
+            <a onclick="switchSection('students', this)" class="sidebar-link">
+                <i class="fa-solid fa-user-graduate"></i> My Students
+            </a>
+            <a onclick="switchSection('subjects', this)" class="sidebar-link">
+                <i class="fa-solid fa-book-bookmark"></i> My Subjects
+            </a>
+            <a onclick="switchSection('exams', this)" class="sidebar-link">
+                <i class="fa-solid fa-file-signature"></i> Manage Exams
+            </a>
+            <div class="sidebar-divider my-3 border-top opacity-50"></div>
+            <a href="{% url 'teacher_proctoring_dashboard' %}" class="sidebar-link">
+                <i class="fa-solid fa-eye"></i> Live Monitoring
+            </a>
+        </div>
+
+        <div class="mt-auto border-top pt-4 px-3">
+            <div class="d-flex align-items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=1abc9c&color=fff" 
+                     class="rounded-circle" style="width: 40px; height: 40px;">
+                <div class="overflow-hidden">
+                    <p class="mb-0 fw-bold small text-truncate">{{ user.username }}</p>
+                    <a href="{% url 'teacher_logout' %}" class="small text-danger text-decoration-none fw-bold">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">Hello, Teacher</h3>
+                <p class="text-muted mb-0">Manage your course students, curate exams, and evaluate performance.</p>
+            </div>
+            <div class="bg-white p-2 rounded-4 shadow-sm border d-flex align-items-center gap-3">
+                <div class="text-end px-2">
+                    <p class="mb-0 fw-bold small">{{ total_students }} Students</p>
+                    <p class="mb-0 text-muted smaller">{{ all_subjects.count }} Subjects</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Overview -->
+        <div id="section-overview" class="dashboard-section active">
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="bg-teal bg-opacity-10 p-3 rounded-4 d-inline-block mb-3" style="color: var(--primary-teal)">
+                            <i class="fa-solid fa-user-group fa-xl"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ total_students }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Supervised Students</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="bg-purple bg-opacity-10 p-3 rounded-4 d-inline-block mb-3" style="color: var(--primary-purple)">
+                            <i class="fa-solid fa-file-invoice fa-xl"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ exams.count }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Active Exam Papers</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Latest Submissions</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Subject</th>
+                                <th>Result</th>
+                                <th>Evaluation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in recent_sessions %}
+                            <tr>
+                                <td class="fw-bold">{{ session.student.username }}</td>
+                                <td>{{ session.video.course.title|default:session.exam.course.title }}</td>
+                                <td><span class="fw-bold">{{ session.score|floatformat:0 }}%</span></td>
+                                <td>
+                                    {% if session.is_reviewed %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">Graded</span>
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">Awaiting Review</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-5 text-muted">No assessment activity found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Students -->
+        <div id="section-students" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                    <div class="d-flex align-items-center gap-3">
+                        <h5 class="mb-0 fw-bold">Assigned Student Roster</h5>
+                        <div id="bulkActionContainer" style="display: none;">
+                            <button onclick="openBulkAssignModal()" class="btn btn-purple btn-sm rounded-pill px-4 fw-bold animate__animated animate__fadeIn">
+                                <i class="fa-solid fa-file-export me-1"></i> Assign Exam (<span id="selectedCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                    <button data-bs-toggle="modal" data-bs-target="#addStudentModal" class="btn btn-teal text-white btn-sm rounded-pill px-4 fw-bold">
+                        <i class="fa-solid fa-plus me-1"></i> Register Student
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="selectAllStudents" class="form-check-input"></th>
+                                <th>Student Name</th>
+                                <th>Subject</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignments %}
+                            <tr class="student-row" data-id="{{ assignment.student.id }}">
+                                <td><input type="checkbox" class="form-check-input student-checkbox" value="{{ assignment.student.id }}"></td>
+                                <td>
+                                    <div class="fw-bold">{{ assignment.student.first_name }} {{ assignment.student.last_name }}</div>
+                                    <small class="text-muted">{{ assignment.student.email }}</small>
+                                </td>
+                                <td><span class="badge bg-light text-primary border rounded-pill">{{ assignment.course.title }}</span></td>
+                                <td>{{ assignment.student.date_joined|date:"M d, Y" }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-teal rounded-pill px-3 me-1"
+                                            onclick="openEditStudentModal('{{ assignment.student.id }}', '{{ assignment.student.first_name }}', '{{ assignment.student.last_name }}', '{{ assignment.student.email }}')">
+                                        <i class="fa-solid fa-user-pen"></i>
+                                    </button>
+                                    <a href="{% url 'delete_student_assignment' assignment.student.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Remove student from your managed roster?')">
+                                        <i class="fa-solid fa-user-xmark"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-5 text-muted">No students assigned yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Subjects -->
+        <div id="section-subjects" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom">
+                    <h5 class="mb-0 fw-bold">My Expertise Areas</h5>
+                </div>
+                <div class="row g-4 p-4">
+                    {% for subject in all_subjects %}
+                    <div class="col-md-4">
+                        <div class="card h-100 rounded-4 border-0 shadow-sm overflow-hidden">
+                            {% if subject.thumbnail %}
+                            <img src="{{ subject.thumbnail.url }}" class="card-img-top" style="height: 140px; object-fit: cover;">
+                            {% endif %}
+                            <div class="card-body">
+                                <h6 class="fw-bold">{{ subject.title }}</h6>
+                                <p class="small text-muted mb-3">{{ subject.description|truncatechars:80 }}</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-teal rounded-pill px-3 flex-grow-1"
+                                            onclick="openEditSubjectModal('{{ subject.id }}', '{{ subject.title }}', '{{ subject.description }}')">
+                                        <i class="fa-solid fa-edit me-1"></i> Edit
+                                    </button>
+                                    <a href="{% url 'delete_teacher_subject' subject.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Delete this subject?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Exams -->
+        <div id="section-exams" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Manage Assessment Papers</h5>
+                    <button data-bs-toggle="modal" data-bs-target="#createExamModal" class="btn btn-purple text-white btn-sm rounded-pill px-4" style="background: var(--primary-purple)">
+                        <i class="fa-solid fa-file-circle-plus me-1"></i> New Exam Paper
+                    </button>
+                </div>
+                {% if exams %}
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Exam Title</th>
+                                <th>Subject</th>
+                                <th>Details</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exam in exams %}
+                            <tr>
+                                <td><div class="fw-bold">{{ exam.title }}</div></td>
+                                <td>{{ exam.course.title }}</td>
+                                <td>
+                                    <span class="small text-muted">{{ exam.questions.count }} Questions | {{ exam.duration_minutes }} Mins</span>
+                                </td>
+                                <td class="text-end">
+                                    <button onclick="openAssignToStudentsModal('{{ exam.id }}', '{{ exam.title }}')" class="btn btn-sm btn-purple text-white rounded-pill px-3 me-1">
+                                        <i class="fa-solid fa-paper-plane me-1"></i> Assign
+                                    </button>
+                                    <a href="{% url 'teacher_exam_questions' exam.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1">
+                                        <i class="fa-solid fa-list-check"></i> Q
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-teal rounded-pill px-3 me-1"
+                                            onclick="openEditExamModal('{{ exam.id }}', '{{ exam.title }}', '{{ exam.duration_minutes }}', '{{ exam.passing_score }}', '{{ exam.description }}')">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                    <a href="{% url 'delete_exam' exam.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="fa-solid fa-file-circle-xmark fs-1 mb-3 opacity-25"></i>
+                    <p>No custom exam papers created yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- Modals -->
+
+<!-- Modal: Add Student -->
+<div class="modal fade" id="addStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Register New Student</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="register_student">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">First Name</label>
+                            <input type="text" name="first_name" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Last Name</label>
+                            <input type="text" name="last_name" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Email Address</label>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Password</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Assign to Subject</label>
+                            <select name="course" class="form-select" required>
+                                {% for subject in all_subjects %}
+                                <option value="{{ subject.id }}">{{ subject.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-teal w-100 mt-4 py-2 text-white fw-bold shadow-sm" style="background: var(--primary-teal)">AUTHORIZE STUDENT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Student -->
+<div class="modal fade" id="editStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Edit Student Details</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_student">
+                    <input type="hidden" name="student_id" id="edit_student_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">First Name</label>
+                        <input type="text" name="first_name" id="edit_student_fname" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Last Name</label>
+                        <input type="text" name="last_name" id="edit_student_lname" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" name="email" id="edit_student_email" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-teal w-100 py-2 text-white fw-bold rounded-pill" style="background: var(--primary-teal)">SAVE CHANGES</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Exam -->
+<div class="modal fade" id="createExamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Draft New Exam Paper</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_exam">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Exam Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="Midterm Assessment" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Subject</label>
+                            <select name="course" class="form-select" required>
+                                {% for subject in all_subjects %}
+                                <option value="{{ subject.id }}">{{ subject.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Duration (Mins)</label>
+                            <input type="number" name="duration" class="form-control" value="60" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Passing Score (%)</label>
+                        <input type="number" name="passing_score" class="form-control" value="50" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Instructions</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-purple w-100 py-2 text-white fw-bold" style="background: var(--primary-purple)">INITIALIZE PAPER</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Exam -->
+<div class="modal fade" id="editExamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Update Exam Details</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_exam">
+                    <input type="hidden" name="exam_id" id="edit_exam_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Exam Title</label>
+                        <input type="text" name="title" id="edit_exam_title" class="form-control" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Duration (Mins)</label>
+                            <input type="number" name="duration" id="edit_exam_duration" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Passing Score (%)</label>
+                            <input type="number" name="passing_score" id="edit_exam_score" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Instructions</label>
+                        <textarea name="description" id="edit_exam_desc" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-teal w-100 py-2 text-white fw-bold rounded-pill" style="background: var(--primary-teal)">UPDATE PAPER</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchSection(sectionId, element) {
+        document.querySelectorAll('.dashboard-section').forEach(s => s.classList.remove('active'));
+        const target = document.getElementById('section-' + sectionId);
+        if (target) target.classList.add('active');
+        
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        if (element) {
+            element.classList.add('active');
+        } else {
+            const links = document.querySelectorAll('.sidebar-link');
+            links.forEach(l => {
+                if (l.getAttribute('onclick') && l.getAttribute('onclick').includes(sectionId)) {
+                    l.classList.add('active');
+                }
+            });
+        }
+        if (history.pushState) {
+            history.pushState(null, null, '#' + sectionId);
+        } else {
+            location.hash = '#' + sectionId;
+        }
+    }
+
+    window.onload = function() {
+        if (location.hash) {
+            const sectionId = location.hash.replace('#', '');
+            switchSection(sectionId);
+        }
+    }
+
+    function openEditStudentModal(id, fname, lname, email) {
+        document.getElementById('edit_student_id').value = id;
+        document.getElementById('edit_student_fname').value = fname;
+        document.getElementById('edit_student_lname').value = lname;
+        document.getElementById('edit_student_email').value = email;
+        new bootstrap.Modal(document.getElementById('editStudentModal')).show();
+    }
+
+    function openEditExamModal(id, title, duration, score, desc) {
+        document.getElementById('edit_exam_id').value = id;
+        document.getElementById('edit_exam_title').value = title;
+        document.getElementById('edit_exam_duration').value = duration;
+        document.getElementById('edit_exam_score').value = score;
+        document.getElementById('edit_exam_desc').value = desc;
+        new bootstrap.Modal(document.getElementById('editExamModal')).show();
+    }
+</script>
+
+<!-- Dashboard Modals -->
+
+<!-- Modal: Assign Exam to Students (From Exam List) -->
+<div class="modal fade" id="assignExamToStudentsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-purple bg-opacity-10 p-3 rounded-circle d-inline-block mb-3" style="color: var(--primary-purple)">
+                        <i class="fa-solid fa-share-nodes fa-2xl"></i>
+                    </div>
+                    <h5 class="fw-bold">Distribute Assessment</h5>
+                    <p class="text-muted small">Assigning <span id="assign_exam_name" class="fw-bold text-dark"></span> to selected students.</p>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="assign_exam">
+                    <input type="hidden" name="exam_id" id="assign_exam_id_input">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Select Students</label>
+                        <div class="student-select-list rounded-3 border p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                            {% for assignment in assignments %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="student_ids" value="{{ assignment.student.id }}" id="std_{{ assignment.student.id }}_modal">
+                                <label class="form-check-label small" for="std_{{ assignment.student.id }}_modal">
+                                    {{ assignment.student.get_full_name|default:assignment.student.username }}
+                                </label>
+                            </div>
+                            {% empty %}
+                            <p class="text-center py-3 text-muted small">No students available in your roster.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-purple py-3 text-white fw-bold shadow-sm rounded-pill">ASSIGN NOW</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Bulk Assign Exam (From Student List) -->
+<div class="modal fade" id="bulkAssignExamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-purple bg-opacity-10 p-3 rounded-circle d-inline-block mb-3" style="color: var(--primary-purple)">
+                        <i class="fa-solid fa-users-gear fa-2xl"></i>
+                    </div>
+                    <h5 class="fw-bold">Bulk Exam Assignment</h5>
+                    <p class="text-muted small">Distribute an assessment paper to <span id="modalSelectedCount" class="fw-bold text-dark">0</span> students.</p>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="assign_exam">
+                    <input type="hidden" name="student_ids" id="bulk_student_ids">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Select Assessment Paper</label>
+                        <select name="exam_id" class="form-select form-select-lg rounded-3 border-2" required>
+                            <option value="">-- Choose Exam --</option>
+                            {% for exam in exams %}
+                            <option value="{{ exam.id }}">{{ exam.title }} ({{ exam.course.title }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-purple py-3 text-white fw-bold shadow-sm rounded-pill">INITIATE ASSIGNMENT</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Subject -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Edit Subject Details</h5>
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_subject">
+                    <input type="hidden" name="subject_id" id="edit_subject_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Subject Title</label>
+                        <input type="text" name="title" id="edit_subject_title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="description" id="edit_subject_desc" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Thumbnail (Optional)</label>
+                        <input type="file" name="thumbnail" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-teal w-100 py-3 text-white fw-bold rounded-3">UPDATE SUBJECT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Console scripts for Assignment functionality
+    function openAssignToStudentsModal(id, title) {
+        document.getElementById('assign_exam_id_input').value = id;
+        document.getElementById('assign_exam_name').textContent = title;
+        new bootstrap.Modal(document.getElementById('assignExamToStudentsModal')).show();
+    }
+
+    function openEditSubjectModal(id, title, desc) {
+        document.getElementById('edit_subject_id').value = id;
+        document.getElementById('edit_subject_title').value = title;
+        document.getElementById('edit_subject_desc').value = desc;
+        new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
+    }
+
+    // Selection Logic for Bulk Exam Assignment
+    const selectAll = document.getElementById('selectAllStudents');
+    const bulkActionContainer = document.getElementById('bulkActionContainer');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const modalSelectedCountSpan = document.getElementById('modalSelectedCount');
+    const bulkStudentIdsInput = document.getElementById('bulk_student_ids');
+
+    function updateSelectionUI() {
+        const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+        const selected = Array.from(studentCheckboxes).filter(cb => cb.checked);
+        const count = selected.length;
+        
+        if (count > 0) {
+            bulkActionContainer.style.display = 'block';
+            selectedCountSpan.textContent = count;
+            modalSelectedCountSpan.textContent = count;
+            bulkStudentIdsInput.value = selected.map(cb => cb.value).join(',');
+        } else {
+            bulkActionContainer.style.display = 'none';
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = this.checked);
+            updateSelectionUI();
+        });
+    }
+
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('student-checkbox')) {
+            updateSelectionUI();
+        }
+    });
+
+    function openBulkAssignModal() {
+        new bootstrap.Modal(document.getElementById('bulkAssignExamModal')).show();
+    }
+</script>
+
+{% endblock %}

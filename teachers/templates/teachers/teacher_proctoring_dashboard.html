@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-1">Assessment Hub</h4>
+            <p class="text-muted mb-0">Review integrity logs and grade submissions for your students.</p>
+        </div>
+        <a href="{% url 'teacher_dashboard' %}" class="btn btn-outline-secondary rounded-pill fw-bold">
+            <i class="fa-solid fa-arrow-left me-2"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h6 class="fw-bold mb-0"><i class="fa-solid fa-list-check me-2 text-primary"></i> Submissions for Review</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="border-0 px-4">Student</th>
+                                <th class="border-0">Type</th>
+                                <th class="border-0">Subject / Course</th>
+                                <th class="border-0 text-center">Score</th>
+                                <th class="border-0">Integrity Status</th>
+                                <th class="border-0 text-end px-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                            <tr>
+                                <td class="px-4">
+                                    <div class="fw-bold text-dark">{{ session.student.first_name }} {{ session.student.last_name }}</div>
+                                    <small class="text-muted">{{ session.student.email }}</small>
+                                </td>
+                                <td>
+                                    {% if session.exam %}
+                                        <span class="badge bg-purple bg-opacity-10 text-purple border px-3 rounded-pill" style="color: #8e44ad; border-color: #8e44ad !important;">FULL EXAM</span>
+                                    {% else %}
+                                        <span class="badge bg-teal bg-opacity-10 text-teal border px-3 rounded-pill" style="color: #1abc9c; border-color: #1abc9c !important;">LESSON QUIZ</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">
+                                        {% if session.video %}{{ session.video.title }}{% else %}{{ session.exam.title }}{% endif %}
+                                    </div>
+                                    <small class="text-muted">
+                                        {% if session.video %}{{ session.video.course.title }}{% else %}{{ session.exam.course.title }}{% endif %}
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    {% if not session.is_reviewed %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning px-2 rounded-pill small">Evaluation Required</span>
+                                    {% else %}
+                                        <h6 class="mb-0 fw-bold">{{ session.score|floatformat:0 }}%</h6>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if session.status == 'flagged' %}
+                                        <span class="badge bg-danger rounded-pill px-3 shadow-sm">Suspicious Activity</span>
+                                    {% elif session.status == 'disqualified' %}
+                                        <span class="badge bg-dark rounded-pill px-3">Invalidated</span>
+                                    {% elif session.is_reviewed %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 rounded-pill"><i class="fa-solid fa-check me-1"></i> Verified</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-muted border px-3 rounded-pill">Pending Review</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end px-4">
+                                    {% if session.exam %}
+                                        <a href="{% url 'grade_exam_session' session.id %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                            {% if session.is_reviewed %}Review Grade{% else %}Evaluate & Grade{% endif %}
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'teacher_review_exam' session.id %}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
+                                            Integrity Check
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-5">
+                                    <i class="fa-solid fa-inbox display-6 d-block mb-3 opacity-25"></i>
+                                    No completed assessment sessions found for your students.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

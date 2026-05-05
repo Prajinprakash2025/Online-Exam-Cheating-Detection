@@ -26,6 +26,8 @@ urlpatterns = [
     
     # CRITICAL FIX: This allows the "Take Quiz" button to work (Now includes AI Proctoring!)
     path('video/<int:video_id>/take-quiz/', views.take_quiz, name='take_quiz'),
+    # Standalone Exam Papers
+    path('exam/<int:exam_id>/start/', views.start_exam, name='start_exam'),
 
     path('mentors/', views.mentors, name='mentors'),
     path('contact/', views.contact, name='contact'),

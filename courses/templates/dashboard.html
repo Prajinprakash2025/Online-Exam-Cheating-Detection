@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block footer %}{% endblock %}
+
 {% block content %}
 <style>
     :root {
@@ -124,13 +126,16 @@
                 <i class="fa-solid fa-chart-pie" style="width: 20px;"></i> Overview
             </a>
             <a onclick="switchSection('content', this)" class="sidebar-link">
-                <i class="fa-solid fa-book-open" style="width: 20px;"></i> Manage Content
+                <i class="fa-solid fa-file-invoice" style="width: 20px;"></i> Exam Subjects
             </a>
             <a onclick="switchSection('exams', this)" class="sidebar-link">
-                <i class="fa-solid fa-shield-halved" style="width: 20px;"></i> Proctoring Logs
+                <i class="fa-solid fa-shield-halved" style="width: 20px;"></i> Proctored Sessions
+            </a>
+            <a onclick="switchSection('examiners', this)" class="sidebar-link">
+                <i class="fa-solid fa-user-tie" style="width: 20px;"></i> Examiners
             </a>
             <a onclick="switchSection('students', this)" class="sidebar-link">
-                <i class="fa-solid fa-users" style="width: 20px;"></i> Student Registry
+                <i class="fa-solid fa-users" style="width: 20px;"></i> Candidate Registry
             </a>
         </div>
     </nav>
@@ -142,11 +147,11 @@
                 <button id="sidebarToggle" class="btn btn-light border shadow-sm rounded-3 px-3 py-2">
                     <i class="fa-solid fa-bars text-dark"></i>
                 </button>
-                <h4 class="mb-0 fw-bolder" style="color: var(--primary-dark);">Admin <span style="color: var(--primary-purple);">Console</span></h4>
+                <h4 class="mb-0 fw-bolder" style="color: var(--primary-dark);">ExamGate <span style="color: var(--primary-purple);">Admin</span></h4>
             </div>
             <div>
                 <a href="{% url 'create_course' %}" class="btn btn-custom rounded-pill px-4 py-2 shadow-sm fw-bold">
-                    <i class="fa-solid fa-folder-plus me-2"></i>New Course
+                    <i class="fa-solid fa-file-circle-plus me-2"></i>New Subject
                 </a>
             </div>
         </div>
@@ -159,10 +164,10 @@
                         <div class="card border-0 shadow-sm p-4 rounded-4 hover-scale h-100" style="background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%); color: white;">
                             <div class="d-flex align-items-center">
                                 <div class="p-3 rounded-circle me-4 bg-white bg-opacity-10">
-                                    <i class="fa-solid fa-users fs-2 text-white"></i>
+                                    <i class="fa-solid fa-user-graduate fs-2 text-white"></i>
                                 </div>
                                 <div>
-                                    <h6 class="mb-1 text-white-50 text-uppercase fw-bold ls-1" style="font-size: 0.8rem;">Total Learners</h6>
+                                    <h6 class="mb-1 text-white-50 text-uppercase fw-bold ls-1" style="font-size: 0.8rem;">Registered Candidates</h6>
                                     <h2 class="fw-bold mb-0 display-6">{{ total_students }}</h2>
                                 </div>
                             </div>
@@ -183,7 +188,7 @@
                                         </div>
                                         <div>
                                             <p class="mb-0 text-dark fw-bold">{{ p.student.username }}</p>
-                                            <small class="text-muted">{% if p.passed %}Passed{% else %}Failed{% endif %} quiz in course: <strong>{{ p.video.course.title }}</strong></small>
+                                            <small class="text-muted">{% if p.passed %}Passed{% else %}Failed{% endif %} certification in subject: <strong>{{ p.video.course.title }}</strong></small>
                                         </div>
                                     </div>
                                     {% empty %}
@@ -199,15 +204,15 @@
             <div id="section-content" class="dashboard-section">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Course Library</h5>
-                        <span class="badge bg-light text-dark border fs-6 px-3 py-2 rounded-pill">{{ courses.count }} Published</span>
+                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Exam Subject Library</h5>
+                        <span class="badge bg-light text-dark border fs-6 px-3 py-2 rounded-pill">{{ courses.count }} Active Subjects</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold" style="width: 50%;">Course Structure</th>
+                                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold" style="width: 50%;">Exam Structure</th>
                                         <th class="py-3 text-uppercase text-muted small fw-bold">Enrollment</th>
                                         <th class="pe-4 py-3 text-end text-uppercase text-muted small fw-bold">Actions</th>
                                     </tr>
@@ -222,7 +227,7 @@
                                                 </div>
                                                 <div>
                                                     <h6 class="fw-bold mb-1 text-dark fs-5">{{ course.title }}</h6>
-                                                    <small class="text-muted"><i class="fa-solid fa-photo-film me-1"></i> {{ course.videos.count }} Lessons</small>
+                                                    <small class="text-muted"><i class="fa-solid fa-file-contract me-1"></i> {{ course.videos.count }} Exam Sessions</small>
                                                 </div>
                                             </div>
                                             <div class="ms-4 ps-3 border-start border-3" style="border-color: #f0f0f0 !important;">
@@ -253,7 +258,7 @@
                                             <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 border border-primary border-opacity-25 fs-6"><i class="fa-solid fa-user-graduate me-2"></i> {{ course.enrolled_count }} Students</span>
                                         </td>
                                         <td class="align-top py-4 pe-4 text-end">
-                                            <a href="{% url 'add_video' course.id %}" class="btn btn-outline-custom rounded-pill fw-bold shadow-sm px-4"><i class="fa-solid fa-video me-2"></i> Add Video</a>
+                                            <a href="{% url 'add_video' course.id %}" class="btn btn-outline-custom rounded-pill fw-bold shadow-sm px-4"><i class="fa-solid fa-plus me-2"></i> Add Exam Session</a>
                                         </td>
                                     </tr>
                                     {% empty %}
@@ -269,7 +274,7 @@
             <div id="section-exams" class="dashboard-section">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Proctored Quiz Logs</h5>
+                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Proctored Session Logs</h5>
                         <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill border border-danger"><i class="fa-solid fa-camera me-1"></i> AI Active</span>
                     </div>
                     <div class="card-body p-0">
@@ -315,10 +320,50 @@
                 </div>
             </div>
 
+            <div id="section-examiners" class="dashboard-section">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                    <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Examiners</h5>
+                        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ examiners.count }} Registered</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Username</th>
+                                        <th class="py-3 text-uppercase text-muted small fw-bold">Email</th>
+                                        <th class="py-3 text-uppercase text-muted small fw-bold">Joined</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for examiner in examiners %}
+                                    <tr>
+                                        <td class="ps-4 py-4 fw-bold text-dark">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
+                                                    <i class="fa-solid fa-user-tie text-secondary"></i>
+                                                </div>
+                                                {{ examiner.username }}
+                                            </div>
+                                        </td>
+                                        <td class="py-4 text-muted">{{ examiner.email }}</td>
+                                        <td class="py-4 small text-muted">{{ examiner.date_joined|date:"M d, Y" }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="3" class="text-center py-5 text-muted fs-5">No examiners registered yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="section-students" class="dashboard-section">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Student Registry</h5>
+                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Candidate Registry</h5>
                         <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ total_students }} Registered</span>
                     </div>
                     <div class="card-body p-0">

@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block footer %}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-teal: #1abc9c;
+        --sidebar-bg: #1e293b;
+    }
+    body { background-color: #f8fafc; }
+    .grading-header {
+        background: white;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 2rem 0;
+    }
+    .ans-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #edf2f7;
+        margin-bottom: 1.5rem;
+    }
+    .badge-qtype {
+        font-size: 0.65rem;
+        letter-spacing: 0.5px;
+        padding: 5px 12px;
+    }
+</style>
+
+<div class="grading-header mb-5">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-1">Grade Submission</h2>
+            <p class="text-muted mb-0">Student: <strong>{{ session.student.first_name }} {{ session.student.last_name }}</strong> &bull; Exam: {{ session.exam.title }}</p>
+        </div>
+        <a href="{% url 'teacher_proctoring_dashboard' %}" class="btn btn-outline-secondary rounded-pill fw-bold">
+            <i class="fa-solid fa-arrow-left me-2"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row g-4">
+        <!-- Main Grading Area -->
+        <div class="col-lg-8">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-file-invoice me-2 text-teal"></i> Responses</h5>
+                
+                {% for ans in answers %}
+                <div class="ans-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-dark border rounded-pill">Question #{{ forloop.counter }}</span>
+                            {% if ans.question.q_type == 'mcq' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary badge-qtype rounded-pill">SINGLE</span>
+                            {% elif ans.question.q_type == 'multi' %}
+                                <span class="badge bg-info bg-opacity-10 text-info badge-qtype rounded-pill">MULTIPLE</span>
+                            {% else %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning badge-qtype rounded-pill">ESSAY</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <span class="small fw-bold text-muted d-block">Weight</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1 rounded-pill small fw-bold">{{ ans.question.points }} PTS</span>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-4" style="line-height: 1.6;">{{ ans.question.question }}</h6>
+
+                    {% if ans.question.q_type == 'essay' %}
+                        <div class="p-3 bg-light rounded-4 border mb-4">
+                            <h6 class="small fw-bold text-muted text-uppercase ls-1 mb-2">Student's Response:</h6>
+                            <p class="mb-0 text-dark" style="white-space: pre-line; line-height: 1.7;">{{ ans.essay_text|default:"(No answer provided)" }}</p>
+                        </div>
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-teal">ASSIGN MARKS (MAX {{ ans.question.points }})</label>
+                                <div class="input-group">
+                                    <input type="number" name="marks_{{ ans.id }}" step="0.5" min="0" max="{{ ans.question.points }}" 
+                                           value="{{ ans.marks_earned }}" class="form-control rounded-4 border-2 border-teal" required>
+                                    <span class="input-group-text bg-teal text-white border-teal rounded-4 ms-2 fw-bold">/ {{ ans.question.points }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="p-3 rounded-4 border {% if ans.is_correct %}bg-success bg-opacity-10 border-success{% else %}bg-danger bg-opacity-10 border-danger{% endif %} mb-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="small fw-bold text-muted text-uppercase ls-1 mb-1">Student Answered:</h6>
+                                    <p class="mb-0 fw-bold {% if ans.is_correct %}text-success{% else %}text-danger{% endif %} text-uppercase">
+                                        Option(s) {{ ans.selected_options }}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    <h6 class="small fw-bold text-muted text-uppercase ls-1 mb-1">Status:</h6>
+                                    <span class="fw-bold {% if ans.is_correct %}text-success{% else %}text-danger{% endif %}">
+                                        {% if ans.is_correct %}<i class="fa-solid fa-check-circle me-1"></i> Correct{% else %}<i class="fa-solid fa-circle-xmark me-1"></i> Incorrect{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="marks_{{ ans.id }}" value="{{ ans.marks_earned }}">
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="ans-card p-4 mt-5 bg-teal bg-opacity-10 border-teal">
+                    <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-comment-medical me-2"></i> Evaluator Feedback</h5>
+                    <textarea name="admin_notes" class="form-control rounded-4 p-3 border-2" rows="3" placeholder="Add any private notes or feedback for the student here...">{{ session.admin_notes }}</textarea>
+                    <button type="submit" class="btn btn-teal w-100 py-3 rounded-4 fw-bold mt-4 shadow-sm" style="background: var(--primary-teal); font-size: 1.1rem;">
+                        FINALIZE & SUBMIT GRADE
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 100px;">
+                <div class="card border-0 shadow-lg rounded-4 p-4 mb-4">
+                    <h6 class="fw-bold text-muted text-uppercase ls-1 mb-4">Integrity Report</h6>
+                    
+                    {% for log in logs|slice:":5" %}
+                    <div class="d-flex gap-3 mb-3 pb-3 border-bottom last-child-0">
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-danger bg-opacity-10 text-danger p-2"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                        </div>
+                        <div>
+                            <p class="small fw-bold text-dark mb-0">{{ log.get_violation_type_display }}</p>
+                            <small class="text-muted">{{ log.timestamp|time:"H:i:s" }}</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 bg-light rounded-4">
+                        <i class="fa-solid fa-circle-check text-success display-6 mb-2"></i>
+                        <h6 class="small fw-bold text-success mb-0">Clean Session</h6>
+                        <p class="text-muted small mb-0">No violations detected by AI.</p>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if logs.count > 5 %}
+                    <div class="mt-2 text-center">
+                        <small class="text-danger fw-bold">+ {{ logs.count|add:"-5" }} more violations recorded</small>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card border-0 bg-dark text-white rounded-4 p-4">
+                    <h6 class="small fw-bold text-muted text-uppercase ls-1 mb-3">AI Recommendation</h6>
+                    {% if logs.count > 10 %}
+                        <p class="small mb-0 text-white-50"><i class="fa-solid fa-robot me-2"></i> System detects high probability of integrity breach. Recommendation: <strong>Invalidate Session</strong>.</p>
+                    {% else %}
+                        <p class="small mb-0 text-white-50"><i class="fa-solid fa-robot me-2"></i> No significant patterns of suspicious behaviour detected.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -49,17 +49,74 @@
                             <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white shadow-sm mb-3" style="width: 120px; height: 120px;">
                                 <i class="fa-solid fa-trophy text-success" style="font-size: 4rem;"></i>
                             </div>
-                            <h2 class="fw-bold text-success mb-0">Quiz Passed!</h2>
+                            <h2 class="fw-bold text-success mb-0">Exam Passed!</h2>
                         </div>
                         
                         <div class="card-body p-5 bg-white">
                             <p class="text-muted text-uppercase fw-bold ls-1 mb-2">Your Score</p>
                             <h1 class="score-display text-dark mb-4">{{ score }}%</h1>
-                            <p class="text-muted mb-5">Great job! You have mastered this lesson and unlocked the next step.</p>
+                             <p class="text-muted mb-5">Great job! You have mastered this assessment and proven your expertise.</p>
+                             
+                             {% if video %}
+                             <a href="{% url 'course_viewer' video.course.id video.order|add:1 %}" class="btn btn-custom rounded-pill px-5 py-3 w-100 fw-bold shadow-sm">
+                                 Next Lesson <i class="fa-solid fa-arrow-right ms-2"></i>
+                             </a>
+                             {% else %}
+                             <a href="{% url 'profile' %}" class="btn btn-custom rounded-pill px-5 py-3 w-100 fw-bold shadow-sm">
+                                 Back to Dashboard <i class="fa-solid fa-house ms-2"></i>
+                             </a>
+                             {% endif %}
+                        </div>
+
+                    {% elif status == 'pending_review' or status == 'pending' %}
+                        <div class="card-header border-0 py-5" style="background-color: #fff9e6;">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white shadow-sm mb-3" style="width: 120px; height: 120px;">
+                                <i class="fa-solid fa-hourglass-half text-warning" style="font-size: 4rem;"></i>
+                            </div>
+                            <h2 class="fw-bold text-warning mb-0">{% if has_essay %}Evaluation Pending{% else %}Reviewing Proctoring{% endif %}</h2>
+                        </div>
+                        
+                        <div class="card-body p-5 bg-white">
+                            <p class="text-muted text-uppercase fw-bold ls-1 mb-2">Automated Score</p>
+                            <h1 class="score-display text-dark mb-4">{{ score }}%</h1>
+                            <p class="text-muted mb-4">
+                                {% if has_essay %}
+                                    Your exam contains <strong>descriptive essay questions</strong>. Your final grade will be calculated once an instructor manually reviews your responses.
+                                {% else %}
+                                    Your response has been recorded. An instructor will review the proctoring session before finalizing your certification.
+                                {% endif %}
+                            </p>
+                            <div class="d-grid gap-3">
+                                <button class="btn btn-custom rounded-pill px-5 py-3 w-100 fw-bold shadow-sm" disabled>
+                                    Waiting for Instructor Evaluation
+                                </button>
+                                <a href="{% url 'profile' %}" class="btn btn-outline-custom rounded-pill py-3">
+                                    Return to Profile
+                                </a>
+                            </div>
+                        </div>
+
+                    {% elif status == 'failed_locked' %}
+                        <div class="card-header border-0 py-5" style="background-color: #ffebee;">
+                            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white shadow-sm mb-3" style="width: 120px; height: 120px;">
+                                <i class="fa-regular fa-face-frown text-danger" style="font-size: 4rem;"></i>
+                            </div>
+                            <h2 class="fw-bold text-danger mb-0">Retake Locked</h2>
+                        </div>
+
+                        <div class="card-body p-5 bg-white">
+                            <p class="text-muted text-uppercase fw-bold ls-1 mb-2">Your Score</p>
+                            <h1 class="score-display text-dark mb-4">{{ score }}%</h1>
+                            <p class="text-muted mb-5">You did not reach the passing threshold. An instructor must authorize a retake for this assessment paper.</p>
                             
-                            <a href="{% url 'course_viewer' video.course.id video.order|add:1 %}" class="btn btn-custom rounded-pill px-5 py-3 w-100 fw-bold shadow-sm">
-                                Next Lesson <i class="fa-solid fa-arrow-right ms-2"></i>
-                            </a>
+                            <div class="d-grid gap-3">
+                                <button class="btn btn-dark rounded-pill py-3 fw-bold shadow-sm" disabled>
+                                    Awaiting Permission
+                                </button>
+                                <a href="{% url 'profile' %}" class="btn btn-outline-custom rounded-pill py-3">
+                                    Back to Dashboard
+                                </a>
+                            </div>
                         </div>
 
                     {% else %}
@@ -73,19 +130,18 @@
                         <div class="card-body p-5 bg-white">
                             <p class="text-muted text-uppercase fw-bold ls-1 mb-2">Your Score</p>
                             <h1 class="score-display text-dark mb-4">{{ score }}%</h1>
-                            <p class="text-muted mb-5">You need <strong>75%</strong> to pass. Don't give up, review the material and try again.</p>
+                            <p class="text-muted mb-5">You need <strong>{{ exam.passing_score }}%</strong> to pass. Don't give up, review the key areas and try again.</p>
                             
-                            <div class="d-grid gap-3">
-                                <a href="{% url 'take_quiz' video.id %}" class="btn btn-dark rounded-pill py-3 fw-bold shadow-sm">
-                                    <i class="fa-solid fa-rotate-right me-2"></i> Try Again
+                             <div class="d-grid gap-3">
+                                <a href="{% url 'profile' %}" class="btn btn-dark rounded-pill py-3 fw-bold shadow-sm">
+                                    <i class="fa-solid fa-rotate-left me-2"></i> Try Again Later
                                 </a>
-                                <a href="{% url 'course_viewer' video.course.id video.order %}" class="btn btn-outline-custom rounded-pill py-3">
-                                    Review Lesson
+                                <a href="{% url 'profile' %}" class="btn btn-outline-custom rounded-pill py-3">
+                                    Back to Dashboard
                                 </a>
-                            </div>
+                             </div>
                         </div>
                     {% endif %}
-
                 </div>
             </div>
         </div>

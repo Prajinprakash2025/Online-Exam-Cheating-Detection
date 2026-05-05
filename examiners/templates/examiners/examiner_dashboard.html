@@ -1,0 +1,708 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block footer %}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-dark: #2c3e50;
+        --primary-purple: #8e44ad;
+        --primary-teal: #1abc9c;
+        --sidebar-width: 280px;
+        --bg-light: #f8fafc;
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-purple {
+        background-color: var(--primary-purple);
+        color: white !important;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-purple:hover {
+        background-color: #7d3c98;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+    }
+
+    .btn-teal {
+        background-color: var(--primary-teal);
+        color: white !important;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-teal:hover {
+        background-color: #16a085;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+    }
+
+    body {
+        background-color: var(--bg-light);
+    }
+
+    /* Sidebar Styling */
+    .dashboard-container {
+        display: flex;
+        min-height: calc(100vh - 70px);
+    }
+
+    .dashboard-sidebar {
+        width: var(--sidebar-width);
+        background: white;
+        border-right: 1px solid #e2e8f0;
+        padding: 2rem 1.5rem;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        height: calc(100vh - 70px);
+    }
+
+    .sidebar-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0.875rem 1.25rem;
+        color: #64748b;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+    }
+
+    .sidebar-link:hover {
+        background: #f1f5f9;
+        color: var(--primary-purple);
+    }
+
+    .sidebar-link.active {
+        background: rgba(142, 68, 173, 0.1);
+        color: var(--primary-purple);
+    }
+
+    /* Main Content Styling */
+    .dashboard-main {
+        flex-grow: 1;
+        padding: 2rem 3rem;
+        overflow-y: auto;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 20px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+    }
+
+    /* Section Handling */
+    .dashboard-section {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .dashboard-section.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 24px;
+        box-shadow: var(--card-shadow);
+    }
+
+    .table-custom th {
+        background: #f8fafc;
+        border: none;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem 1.5rem;
+    }
+
+    .table-custom td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    /* Premium Modal Styling */
+    .modal-content {
+        border-radius: 24px;
+        border: none;
+        box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+        overflow: hidden;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 1.5rem 2rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .modal-eg-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-eg-input, .modal-body input, .modal-body select {
+        border-radius: 14px !important;
+        padding: 12px 20px !important;
+        background-color: #f8fafc !important;
+        border: 2px solid #e2e8f0 !important;
+        font-weight: 600 !important;
+        color: var(--primary-dark);
+        transition: all 0.3s;
+        outline: none;
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .modal-body input:focus, .modal-body select:focus {
+        background-color: white !important;
+        border-color: var(--primary-purple) !important;
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1) !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-eg-submit {
+        background: var(--primary-purple);
+        color: white;
+        border: none;
+        padding: 0.875rem;
+        border-radius: 14px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+    }
+
+    .btn-eg-submit:hover {
+        background: #732d91;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <nav class="dashboard-sidebar shadow-sm">
+        <div class="mb-5 px-3">
+            <h5 class="fw-bold mb-0">Conductor <span class="text-primary">Portal</span></h5>
+            <small class="text-muted">Master Management</small>
+        </div>
+
+        <div class="nav-links">
+            <a onclick="switchSection('overview', this)" class="sidebar-link active">
+                <i class="fa-solid fa-chart-line"></i> Overview
+            </a>
+            <a onclick="switchSection('teachers', this)" class="sidebar-link">
+                <i class="fa-solid fa-users-gear"></i> Certified Teachers
+            </a>
+            <a onclick="switchSection('candidates', this)" class="sidebar-link">
+                <i class="fa-solid fa-user-graduate"></i> Managed Candidates
+            </a>
+            <a onclick="switchSection('subjects', this)" class="sidebar-link">
+                <i class="fa-solid fa-book-bookmark"></i> Exam Subjects
+            </a>
+            <div class="sidebar-divider my-3 border-top opacity-50"></div>
+            <a onclick="switchSection('monitoring', this)" class="sidebar-link">
+                <i class="fa-solid fa-eye"></i> Live Monitoring
+            </a>
+            <a onclick="switchSection('reports', this)" class="sidebar-link">
+                <i class="fa-solid fa-file-waveform"></i> Evaluation Reports
+            </a>
+        </div>
+
+        <div class="mt-auto border-top pt-4 px-3">
+            <div class="d-flex align-items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=8e44ad&color=fff" 
+                     class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                <div class="overflow-hidden">
+                    <p class="mb-0 fw-bold small text-truncate">{{ user.username }}</p>
+                    <a href="{% url 'examiner_logout' %}" class="small text-danger text-decoration-none fw-bold">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">Conductor Control Center</h3>
+                <p class="text-muted mb-0">Centralized authority for teacher certification and candidate oversight.</p>
+            </div>
+            <div class="bg-white p-2 rounded-4 shadow-sm border d-flex align-items-center gap-3">
+                <div class="text-end px-2">
+                    <p class="mb-0 fw-bold small">{{ total_teachers }} Teachers</p>
+                    <p class="mb-0 text-muted smaller">{{ total_candidates }} Candidates</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Overview -->
+        <div id="section-overview" class="dashboard-section active">
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ total_teachers }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Active Staff Teachers</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ total_candidates }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Assigned Candidates</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ flagged_count }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Integrity Alerts</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="glass-card overflow-hidden">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Global Proctoring Feed</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Candidate</th>
+                                <th>Assessment</th>
+                                <th>Score</th>
+                                <th>Integrity</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in recent_sessions %}
+                            <tr>
+                                <td><span class="fw-bold">{{ session.student.username }}</span></td>
+                                <td>{% if session.video %}{{ session.video.title }}{% else %}{{ session.exam.title }}{% endif %}</td>
+                                <td><span class="fw-bold">{{ session.score|default:"--" }}%</span></td>
+                                <td>
+                                    {% if session.status == 'flagged' %}
+                                        <span class="status-badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Flagged</span>
+                                    {% else %}
+                                        <span class="status-badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Clean</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted small">{{ session.start_time|timesince }} ago</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No global activity recorded.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Teachers -->
+        <div id="section-teachers" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                    <div>
+                        <h5 class="mb-0 fw-bold">Staff Teacher Management</h5>
+                        <p class="text-muted smaller mb-0">Directly authorized teachers: {{ total_teachers }}</p>
+                    </div>
+                    <button data-bs-toggle="modal" data-bs-target="#registerTeacherModal" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold">
+                        <i class="fa-solid fa-user-plus me-1"></i> Add New Teacher
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Teacher Name</th>
+                                <th>Email</th>
+                                <th>Specialty</th>
+                                <th>Experience</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for teacher in teachers %}
+                            <tr>
+                                <td class="fw-bold">{{ teacher.username }}</td>
+                                <td class="text-muted small">{{ teacher.email }}</td>
+                                <td><span class="badge bg-light text-primary border rounded-pill">{{ teacher.specialty|default:"General" }}</span></td>
+                                <td>{{ teacher.experience_years }} Years</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" 
+                                            onclick="openEditTeacherModal('{{ teacher.id }}', '{{ teacher.first_name }}', '{{ teacher.last_name }}', '{{ teacher.email }}')">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <a href="{% url 'delete_conductor' teacher.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Revoke this teacher\'s access?')"><i class="fa-solid fa-trash"></i></a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No teachers assigned to your portal.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Candidates -->
+        <div id="section-candidates" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                    <div>
+                        <h5 class="mb-0 fw-bold">Assigned Candidates</h5>
+                        <p class="text-muted smaller mb-0">Supervised students: {{ total_candidates }}</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Candidate</th>
+                                <th>Assigned Teacher</th>
+                                <th>Assessment Subject</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in candidates %}
+                            <tr>
+                                <td>
+                                    <p class="mb-0 fw-bold">{{ assignment.student.first_name }} {{ assignment.student.last_name }}</p>
+                                    <small class="text-muted">{{ assignment.student.email }}</small>
+                                </td>
+                                <td><i class="fa-solid fa-chalkboard-user me-1"></i> {{ assignment.teacher.username }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ assignment.course.title }}</span></td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-1"
+                                            onclick="openEditCandidateModal('{{ assignment.student.id }}', '{{ assignment.student.first_name }}', '{{ assignment.student.last_name }}', '{{ assignment.student.email }}')">
+                                        <i class="fa-solid fa-user-pen"></i>
+                                    </button>
+                                    <a href="{% url 'delete_candidate' assignment.student.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Remove student from management?')">
+                                        <i class="fa-solid fa-user-xmark"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-subjects" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">Master Subject Library</h5>
+                    <button data-bs-toggle="modal" data-bs-target="#registerSubjectModal" class="btn btn-warning text-white btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-folder-plus me-1"></i> Create Subject
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Created</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subject in all_subjects %}
+                            <tr>
+                                <td><span class="fw-bold">{{ subject.title }}</span></td>
+                                <td class="text-muted small">{{ subject.created_at|date:"M d, Y" }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-warning rounded-pill px-3 me-1"
+                                            onclick="openEditSubjectModal('{{ subject.id }}', '{{ subject.title }}', '{{ subject.description }}')">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                    <a href="{% url 'delete_subject' subject.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="fa-solid fa-trash"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="registerTeacherModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-5">
+                <div class="text-center mb-5">
+                    <div class="modal-eg-icon bg-primary bg-opacity-10 text-primary mx-auto">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h4 class="fw-bold">Register New Teacher</h4>
+                    <p class="text-muted">Onboard a new staff member to manage student exams.</p>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="register_conductor">
+                    <div class="row g-4 d-flex">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">First Name</label>
+                            <input type="text" name="first_name" class="form-control" placeholder="John" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Last Name</label>
+                            <input type="text" name="last_name" class="form-control" placeholder="Doe" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Email Address</label>
+                            <input type="email" name="email" class="form-control" placeholder="teacher@example.com" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-eg-submit w-100 mt-5">AUTHORIZE TEACHER ACCOUNT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Subject Creation -->
+<div class="modal fade" id="registerSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Create Master Subject</h5>
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="register_subject">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Subject Title</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Thumbnail</label>
+                        <input type="file" name="thumbnail" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 py-3 text-white fw-bold rounded-3">CREATE SUBJECT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Teacher -->
+<div class="modal fade" id="editTeacherModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Edit Staff Teacher</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_conductor">
+                    <input type="hidden" name="conductor_id" id="edit_teacher_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">First Name</label>
+                        <input type="text" name="first_name" id="edit_teacher_fname" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Last Name</label>
+                        <input type="text" name="last_name" id="edit_teacher_lname" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" name="email" id="edit_teacher_email" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3">SAVE CHANGES</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Subject -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Edit Master Subject</h5>
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_subject">
+                    <input type="hidden" name="subject_id" id="edit_subject_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Subject Title</label>
+                        <input type="text" name="title" id="edit_subject_title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="description" id="edit_subject_desc" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Thumbnail (Optional)</label>
+                        <input type="file" name="thumbnail" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 py-3 text-white fw-bold rounded-3">UPDATE SUBJECT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Candidate -->
+<div class="modal fade" id="editCandidateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Edit Candidate Details</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_candidate">
+                    <input type="hidden" name="candidate_id" id="edit_candidate_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">First Name</label>
+                        <input type="text" name="first_name" id="edit_candidate_fname" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Last Name</label>
+                        <input type="text" name="last_name" id="edit_candidate_lname" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" name="email" id="edit_candidate_email" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-secondary w-100 py-3 fw-bold rounded-3">UPDATE CANDIDATE</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchSection(sectionId, element) {
+        document.querySelectorAll('.dashboard-section').forEach(s => s.classList.remove('active'));
+        const target = document.getElementById('section-' + sectionId);
+        if (target) target.classList.add('active');
+        
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        if (element) {
+            element.classList.add('active');
+        } else {
+            // Find sidebar link by onclick contains sectionId
+            const links = document.querySelectorAll('.sidebar-link');
+            links.forEach(l => {
+                if (l.getAttribute('onclick') && l.getAttribute('onclick').includes(sectionId)) {
+                    l.classList.add('active');
+                }
+            });
+        }
+        // Update URL hash without scrolling
+        if (history.pushState) {
+            history.pushState(null, null, '#' + sectionId);
+        } else {
+            location.hash = '#' + sectionId;
+        }
+    }
+
+    // Bug Fix: Persistence logic
+    window.onload = function() {
+        if (location.hash) {
+            const sectionId = location.hash.replace('#', '');
+            switchSection(sectionId);
+        }
+    }
+
+    // Modal Helpers
+    function openEditTeacherModal(id, fname, lname, email) {
+        document.getElementById('edit_teacher_id').value = id;
+        document.getElementById('edit_teacher_fname').value = fname;
+        document.getElementById('edit_teacher_lname').value = lname;
+        document.getElementById('edit_teacher_email').value = email;
+        new bootstrap.Modal(document.getElementById('editTeacherModal')).show();
+    }
+
+    function openEditSubjectModal(id, title, desc) {
+        document.getElementById('edit_subject_id').value = id;
+        document.getElementById('edit_subject_title').value = title;
+        document.getElementById('edit_subject_desc').value = desc;
+        new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
+    }
+
+    function openEditCandidateModal(id, fname, lname, email) {
+        document.getElementById('edit_candidate_id').value = id;
+        document.getElementById('edit_candidate_fname').value = fname;
+        document.getElementById('edit_candidate_lname').value = lname;
+        document.getElementById('edit_candidate_email').value = email;
+        new bootstrap.Modal(document.getElementById('editCandidateModal')).show();
+    }
+</script>
+
+{% endblock %}

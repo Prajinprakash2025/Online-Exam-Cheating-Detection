@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-teal: #1abc9c;
+        --bg-light: #f8fafc;
+    }
+    body { background-color: var(--bg-light); }
+    .exam-header {
+        background: white;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 3rem 0;
+    }
+    .question-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #edf2f7;
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s;
+    }
+    .question-card:hover { transform: translateY(-2px); }
+    .btn-teal { background: var(--primary-teal); color: white; font-weight: 700; border-radius: 12px; }
+    .btn-teal:hover { background: #16a085; color: white; }
+    .type-pill {
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+        font-weight: 800;
+        padding: 4px 12px;
+        border-radius: 50px;
+    }
+    .transition-all { transition: all 0.3s ease; }
+</style>
+
+<div class="exam-header">
+    <div class="container text-center">
+        <div class="mb-3">
+            <span class="badge bg-teal bg-opacity-10 text-teal px-3 py-2 rounded-pill" style="color: var(--primary-teal); background: rgba(26, 188, 156, 0.1)">
+                <i class="fa-solid fa-file-signature me-1"></i> Exam Blueprint
+            </span>
+        </div>
+        <h2 class="fw-bold display-6">{{ exam.title }}</h2>
+        <p class="text-muted mx-auto" style="max-width: 600px;">{{ exam.description|default:"Curate your assessment by adding single choice, multiple choice, and essay questions below." }}</p>
+        
+        <div class="d-flex justify-content-center gap-3 mt-4">
+            <div class="bg-light px-4 py-2 rounded-pill border">
+                <i class="fa-regular fa-clock me-2 text-muted"></i> <strong>{{ exam.duration_minutes }} Minutes</strong>
+            </div>
+            <div class="bg-light px-4 py-2 rounded-pill border">
+                <i class="fa-solid fa-bullseye me-2 text-muted"></i> <strong>{{ exam.passing_score }}% Pass Mark</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-5">
+        <!-- Question Builder -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 p-4 sticky-top" style="top: 100px;">
+                <h5 class="fw-bold mb-4">Add New Question</h5>
+                <form method="POST" id="questionForm" onsubmit="return validateQuestionForm()">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">QUESTION TYPE</label>
+                        <select name="q_type" id="q_type_select" class="form-select rounded-4 border-2 py-2 fw-bold" onchange="updateQuestionUI()" required>
+                            <option value="mcq">Single Choice (MCQ)</option>
+                            <option value="multi">Multiple Choice (Checkboxes)</option>
+                            <option value="essay">Descriptive Essay</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">QUESTION TEXT</label>
+                        <textarea name="question" class="form-control rounded-4 p-3 border-2" rows="3" placeholder="Enter the question here..." required></textarea>
+                    </div>
+
+                    <div id="options_container" class="transition-all">
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">OPTION 1</label>
+                                <input type="text" name="option_1" class="form-control rounded-4 border-2" placeholder="Option A">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">OPTION 2</label>
+                                <input type="text" name="option_2" class="form-control rounded-4 border-2" placeholder="Option B">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">OPTION 3</label>
+                                <input type="text" name="option_3" class="form-control rounded-4 border-2" placeholder="Option C">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">OPTION 4</label>
+                                <input type="text" name="option_4" class="form-control rounded-4 border-2" placeholder="Option D">
+                            </div>
+                        </div>
+
+                        <div id="single_correct_tray" class="mb-4">
+                            <label class="form-label small fw-bold text-muted">CORRECT ANSWER (SINGLE)</label>
+                            <select name="correct_option" class="form-select rounded-4 border-2 py-2 fw-bold">
+                                <option value="">Choose Correct Index...</option>
+                                <option value="1">Option 1</option>
+                                <option value="2">Option 2</option>
+                                <option value="3">Option 3</option>
+                                <option value="4">Option 4</option>
+                            </select>
+                        </div>
+
+                        <div id="multi_correct_tray" class="mb-4" style="display: none;">
+                            <label class="form-label small fw-bold text-muted d-block mb-2">CORRECT ANSWERS (MULTIPLE)</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="btn-group w-100" role="group">
+                                    <input type="checkbox" class="btn-check" id="mc1" name="correct_options" value="1">
+                                    <label class="btn btn-outline-secondary rounded-pill me-2 px-3 small fw-bold" for="mc1">1</label>
+                                    
+                                    <input type="checkbox" class="btn-check" id="mc2" name="correct_options" value="2">
+                                    <label class="btn btn-outline-secondary rounded-pill me-2 px-3 small fw-bold" for="mc2">2</label>
+                                    
+                                    <input type="checkbox" class="btn-check" id="mc3" name="correct_options" value="3">
+                                    <label class="btn btn-outline-secondary rounded-pill me-2 px-3 small fw-bold" for="mc3">3</label>
+                                    
+                                    <input type="checkbox" class="btn-check" id="mc4" name="correct_options" value="4">
+                                    <label class="btn btn-outline-secondary rounded-pill px-3 small fw-bold" for="mc4">4</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">WEIGHT (POINTS)</label>
+                        <input type="number" name="points" step="0.5" value="1.0" class="form-control rounded-4 border-2" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-teal w-100 py-3 shadow-sm mt-2">
+                        ADD TO EXAM PAPER
+                    </button>
+                    <a href="{% url 'teacher_dashboard' %}#exams" class="btn btn-light w-100 py-3 mt-3 rounded-4 fw-bold">BACK TO DASHBOARD</a>
+                </form>
+            </div>
+        </div>
+
+        <!-- Question List -->
+        <div class="col-lg-7">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0">Exam Questions ({{ questions|length }})</h5>
+            </div>
+
+            {% for q in questions %}
+            <div class="question-card p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark border px-3 py-1 rounded-pill">Question #{{ forloop.counter }}</span>
+                        {% if q.q_type == 'mcq' %}
+                            <span class="type-pill bg-primary bg-opacity-10 text-primary">SINGLE</span>
+                        {% elif q.q_type == 'multi' %}
+                            <span class="type-pill bg-info bg-opacity-10 text-info">MULTIPLE</span>
+                        {% else %}
+                            <span class="type-pill bg-warning bg-opacity-10 text-warning">ESSAY</span>
+                        {% endif %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1 rounded-pill small fw-bold" style="font-size: 0.65rem;">{{ q.points }} PTS</span>
+                    </div>
+                    <a href="{% url 'delete_exam_question' q.id %}" class="btn btn-link text-danger p-0" title="Remove" onclick="return confirm('Remove this question?')"><i class="fa-solid fa-trash-can"></i></a>
+                </div>
+                <h6 class="fw-bold text-dark mb-4" style="line-height: 1.6;">{{ q.question }}</h6>
+                
+                {% if q.q_type != 'essay' %}
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="p-2 px-3 rounded-3 border {% if '1' in q.correct_answer or q.correct_answer == '1' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                            <strong>A.</strong> {{ q.option_1 }}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 px-3 rounded-3 border {% if '2' in q.correct_answer or q.correct_answer == '2' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                            <strong>B.</strong> {{ q.option_2 }}
+                        </div>
+                    </div>
+                    {% if q.option_3 %}
+                    <div class="col-6">
+                        <div class="p-2 px-3 rounded-3 border {% if '3' in q.correct_answer or q.correct_answer == '3' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                            <strong>C.</strong> {{ q.option_3 }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if q.option_4 %}
+                    <div class="col-6">
+                        <div class="p-2 px-3 rounded-3 border {% if '4' in q.correct_answer or q.correct_answer == '4' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                            <strong>D.</strong> {{ q.option_4 }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="p-3 bg-light rounded-4 text-center text-muted small">
+                    <i class="fa-solid fa-pen-nib me-1"></i> Descriptive answer expected from student.
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="text-center py-5 bg-white rounded-4 border-dashed border-2" style="border-style: dashed !important;">
+                <div class="mb-3"><i class="fa-solid fa-folder-open text-muted display-4 opacity-25"></i></div>
+                <h6 class="text-muted">This exam paper is currently empty.</h6>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateQuestionUI() {
+        const type = document.getElementById('q_type_select').value;
+        const optionsContainer = document.getElementById('options_container');
+        const singleTray = document.getElementById('single_correct_tray');
+        const multiTray = document.getElementById('multi_correct_tray');
+        const inputs = optionsContainer.querySelectorAll('input');
+
+        if (type === 'essay') {
+            optionsContainer.style.opacity = '0';
+            setTimeout(() => { optionsContainer.style.display = 'none'; }, 300);
+            inputs.forEach(i => i.required = false);
+        } else {
+            optionsContainer.style.display = 'block';
+            setTimeout(() => { optionsContainer.style.opacity = '1'; }, 10);
+            inputs.forEach(i => i.required = true);
+
+            if (type === 'mcq') {
+                singleTray.style.display = 'block';
+                multiTray.style.display = 'none';
+            } else {
+                singleTray.style.display = 'none';
+                multiTray.style.display = 'block';
+            }
+        }
+    }
+
+    function validateQuestionForm() {
+        const type = document.getElementById('q_type_select').value;
+        if (type === 'essay') return true;
+
+        if (type === 'mcq') {
+            const correct = document.querySelector('select[name="correct_option"]').value;
+            if (!correct) {
+                alert("Please select the correct option for this MCQ.");
+                return false;
+            }
+        } else if (type === 'multi') {
+            const checked = document.querySelectorAll('input[name="correct_options"]:checked');
+            if (checked.length === 0) {
+                alert("Please select at least one correct answer for this Multiple Choice question.");
+                return false;
+            }
+        }
+        return true;
+    }
+</script>
+{% endblock %}

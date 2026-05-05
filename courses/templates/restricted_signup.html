@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5 mt-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="bg-light p-5 rounded-5 shadow-sm border">
+                <i class="fa-solid fa-user-lock text-danger display-1 mb-4"></i>
+                <h2 class="fw-bold text-dark mb-3">Registration Restricted</h2>
+                <p class="lead text-muted mb-4">
+                    Student accounts for <strong>ExamGate</strong> can only be created by certified Teachers and Examiners.
+                </p>
+                <p class="text-muted mb-5">
+                    If you are a candidate, please contact your institution or course instructor to receive your login credentials.
+                </p>
+                <div class="d-grid gap-3">
+                    <a href="{% url 'login' %}" class="btn btn-custom rounded-pill fw-bold py-3">
+                        Already have an account? Sign In
+                    </a>
+                    <a href="{% url 'home' %}" class="btn btn-outline-custom rounded-pill fw-bold py-3">
+                        Return to Homepage
+                    </a>
+                </div>
+                <div class="mt-5 pt-4 border-top">
+                    <p class="small text-muted mb-0">
+                         Institution looking to join? <a href="{% url 'contact' %}" class="text-primary fw-bold">Contact our team</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

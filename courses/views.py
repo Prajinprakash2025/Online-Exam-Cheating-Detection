@@ -29,10 +29,10 @@ def is_admin(user):
 # PUBLIC VIEWS
 # ------------------------------------------------------------------
 def home(request):
-    courses = Course.objects.annotate(video_count=Count('videos')).all()
-    # Exam query removed! Just showing courses now.
+    # Fetch Examiners and Teachers for the landing page directory
+    conductors = User.objects.filter(Q(is_examiner=True) | Q(is_teacher=True)).exclude(is_superuser=True).order_by('?')[:8]
     return render(request, 'home.html', {
-        'courses': courses
+        'conductors': conductors
     })
 
 def course_list(request):
@@ -62,26 +62,9 @@ def contact(request):
 # AUTHENTICATION VIEWS
 # ------------------------------------------------------------------
 def signup_view(request):
-    if request.method == 'POST':
-        form = StudentSignupForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = False 
-            user.save()
-
-            otp = "123456" # Hardcoded for testing
-            
-            request.session['signup_otp'] = otp
-            request.session['signup_user_id'] = user.id
-            request.session['signup_email'] = user.email
-            
-            return redirect('verify_otp')
-        else:
-            print("❌ FORM ERRORS:", form.errors)
-    else:
-        form = StudentSignupForm()
-        
-    return render(request, 'signup.html', {'form': form})
+    # Student self-signup is disabled per new "Exam Portal" logic.
+    # Redirect to a page explaining that access is granted by Teachers/Examiners.
+    return render(request, 'restricted_signup.html')
 
 def verify_otp(request):
     if request.method == 'POST':
@@ -113,23 +96,7 @@ def verify_otp(request):
 
 def login_view(request):
     if request.method == 'POST':
-        data = request.POST.copy()
-        login_input = data.get('username')
-
-        if login_input and '@' in login_input:
-            try:
-                user = User.objects.get(email=login_input)
-                data['username'] = user.username
-            except User.MultipleObjectsReturned:
-                # If duplicates exist, fall back to the most recently created user
-                user = User.objects.filter(email=login_input).order_by('-date_joined').first()
-                if user:
-                    data['username'] = user.username
-            except User.DoesNotExist:
-                pass
-
-        form = AuthenticationForm(data=data)
-        
+        form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
@@ -217,12 +184,15 @@ def reset_new_password_view(request):
 # ------------------------------------------------------------------
 @login_required
 def profile_view(request):
+    from courses.models import ExamAssignment
     enrolled_courses = Enrollment.objects.filter(student=request.user)
     quiz_progress = Progress.objects.filter(student=request.user)
+    exam_assignments = ExamAssignment.objects.filter(student=request.user).select_related('exam', 'exam__course')
     
     context = {
         'enrolled_courses': enrolled_courses,
         'quiz_progress': quiz_progress,
+        'exam_assignments': exam_assignments,
     }
     return render(request, 'profile.html', context)
 
@@ -323,6 +293,112 @@ def take_quiz(request, video_id):
     return render(request, 'take_quiz.html', {
         'questions': questions, 
         'video': video,
+        'session': session,
+        'remaining_time': int(remaining_time)
+    })
+
+@login_required
+def start_exam(request, exam_id):
+    from .models import Exam, ExamQuestion, ExamAssignment, QuizSession
+    exam = get_object_or_404(Exam, id=exam_id)
+    
+    # Verify assignment
+    assignment = get_object_or_404(ExamAssignment, student=request.user, exam=exam)
+    
+    if assignment.status == 'completed':
+        messages.info(request, "You have already completed this assessment.")
+        return redirect('profile')
+
+    questions = exam.questions.all()
+    if not questions.exists():
+        messages.error(request, "This exam paper has no questions yet. Please contact your conductor.")
+        return redirect('profile')
+
+    # 1. SETUP PROCTORING SESSION
+    session, created = QuizSession.objects.get_or_create(
+        student=request.user,
+        exam=exam,
+        defaults={'status': 'ongoing'}
+    )
+    
+    # 2. START TIMER
+    if created or not session.end_time:
+        session.end_time = timezone.now() + timedelta(minutes=exam.duration_minutes)
+        session.save()
+
+    remaining_time = (session.end_time - timezone.now()).total_seconds()
+
+    # 3. GRADING & SUBMISSION LOGIC
+    if request.method == 'POST' or remaining_time <= 0:
+        from .models import StudentAnswer
+        total_score = 0
+        max_possible = sum(q.points for q in questions)
+        has_essay = questions.filter(q_type='essay').exists()
+        
+        if request.method == 'POST':
+            for q in questions:
+                earned = 0
+                is_correct = False
+                user_val = ""
+                essay_text = ""
+                
+                if q.q_type == 'mcq':
+                    user_val = request.POST.get(f'question_{q.id}')
+                    if user_val == q.correct_answer:
+                        earned = q.points
+                        is_correct = True
+                
+                elif q.q_type == 'multi':
+                    user_list = request.POST.getlist(f'question_{q.id}')
+                    user_val = ",".join(sorted(user_list))
+                    # All correct indices must match exactly
+                    if user_val == q.correct_answer:
+                        earned = q.points
+                        is_correct = True
+                
+                elif q.q_type == 'essay':
+                    essay_text = request.POST.get(f'question_{q.id}', '')
+                    earned = 0 # Manual review required
+                    is_correct = None
+                
+                # Save answer record
+                StudentAnswer.objects.update_or_create(
+                    session=session,
+                    question=q,
+                    defaults={
+                        'selected_options': user_val,
+                        'essay_text': essay_text,
+                        'is_correct': is_correct,
+                        'marks_earned': earned
+                    }
+                )
+                total_score += earned
+        
+        percentage = (total_score / max_possible) * 100 if max_possible > 0 else 0
+
+        # Mark Session as submitted
+        session.score = percentage
+        session.status = 'submitted'
+        # If no essays, it's immediately reviewed. If essays, teacher must review.
+        session.is_reviewed = not has_essay 
+        session.save()
+
+        # Update assignment status
+        assignment.status = 'completed'
+        assignment.final_score = percentage
+        assignment.save()
+
+        return render(request, 'quiz_result.html', {
+            'status': 'passed' if percentage >= exam.passing_score else ('pending' if has_essay else 'failed'), 
+            'exam': exam, 
+            'score': int(percentage),
+            'has_essay': has_essay
+        })
+
+    # 4. RENDER PROCTORED PAGE (Generic support in take_quiz.html)
+    return render(request, 'take_quiz.html', {
+        'questions': questions, 
+        'exam_title': exam.title,
         'session': session,
         'remaining_time': int(remaining_time)
     })
@@ -652,6 +728,7 @@ def instructor_dashboard(request):
     
     # REPLACED ExamSession WITH QuizSession
     quiz_sessions = QuizSession.objects.exclude(status='ongoing').order_by('-start_time')
+    examiners = User.objects.filter(is_examiner=True).order_by('-date_joined')
 
     context = {
         'courses': courses,
@@ -659,6 +736,7 @@ def instructor_dashboard(request):
         'all_students': students,
         'recent_activity': recent_activity,
         'quiz_sessions': quiz_sessions, 
+        'examiners': examiners,
     }
     return render(request, 'dashboard.html', context)
 

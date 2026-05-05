@@ -88,7 +88,7 @@ class StudentSignupForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('first_name', 'last_name', 'username', 'email', 'phone_number', 'age', 'roll_no', 'course_interest')
+        fields = ('first_name', 'last_name', 'email', 'phone_number', 'age', 'roll_no', 'course_interest')
 
     # 3. Style the Password AND Username Fields
     def __init__(self, *args, **kwargs):
@@ -108,12 +108,13 @@ class StudentSignupForm(UserCreationForm):
                 'placeholder': 'Confirm Password'
             })
 
-        # Style Username
-        if 'username' in self.fields:
-            self.fields['username'].widget.attrs.update({
-                'class': 'form-control rounded-pill px-4 py-2', 
-                'placeholder': 'Choose a Username'
-            })
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        # Use email prefix as username
+        user.username = self.cleaned_data['email'].split('@')[0]
+        if commit:
+            user.save()
+        return user
 
 # ------------------------------------------------------------------
 # INTERACTION FORMS

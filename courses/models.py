@@ -9,13 +9,27 @@ from django.utils import timezone
 # USER MODEL
 # ------------------------------------------------------------------
 class User(AbstractUser):
+    email = models.EmailField(unique=True)
+    
     is_instructor = models.BooleanField(default=False)
+    is_teacher = models.BooleanField(default=False)
+    is_examiner = models.BooleanField(default=False)
     is_student = models.BooleanField(default=True)
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+    
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
     
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     age = models.PositiveIntegerField(blank=True, null=True)
     roll_no = models.CharField(max_length=20, unique=True, blank=True, null=True, help_text="Your Student ID")
+    
+    # Professional fields for Exam Conductors
+    bio = models.TextField(blank=True, null=True, help_text="Short biography or professional summary")
+    specialty = models.CharField(max_length=100, blank=True, null=True, help_text="Expertise (e.g. Mathematics, AI, Math)")
+    experience_years = models.PositiveIntegerField(default=0)
+
     course_interest = models.ForeignKey('Course', on_delete=models.SET_NULL, null=True, blank=True, related_name='interested_students')  
 
     def __str__(self):
@@ -75,6 +89,42 @@ class Quiz(models.Model):
 
     def __str__(self):
         return f"Question: {self.question[:50]}"
+
+class Exam(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='exams')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    duration_minutes = models.PositiveIntegerField(default=60)
+    passing_score = models.FloatField(default=75.0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_exams')
+
+    def __str__(self):
+        return f"{self.title} ({self.course.title})"
+
+class ExamQuestion(models.Model):
+    QUESTION_TYPES = (
+        ('mcq', 'Single Choice'),
+        ('multi', 'Multiple Choice'),
+        ('essay', 'Descriptive Essay'),
+    )
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='questions')
+    q_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='mcq')
+    question = models.TextField()
+    
+    # Options (Used for MCQ and Multi)
+    option_1 = models.CharField(max_length=200, blank=True, null=True)
+    option_2 = models.CharField(max_length=200, blank=True, null=True)
+    option_3 = models.CharField(max_length=200, blank=True, null=True)
+    option_4 = models.CharField(max_length=200, blank=True, null=True)
+    
+    # For MCQ: single digit (1-4). For Multi: comma-separated (e.g. "1,3")
+    correct_answer = models.CharField(max_length=50, blank=True, null=True)
+    
+    points = models.FloatField(default=1.0)
+
+    def __str__(self):
+        return f"[{self.get_q_type_display()}] {self.question[:50]}"
 
 class Review(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
@@ -139,7 +189,8 @@ class QuizSession(models.Model):
     )
 
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quiz_sessions')
-    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='proctored_sessions')
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='proctored_sessions', null=True, blank=True)
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='proctored_sessions', null=True, blank=True)
     start_time = models.DateTimeField(default=timezone.now)
     end_time = models.DateTimeField(null=True, blank=True)
     score = models.FloatField(null=True, blank=True)
@@ -147,9 +198,45 @@ class QuizSession(models.Model):
     
     is_reviewed = models.BooleanField(default=False)
     admin_notes = models.TextField(blank=True, null=True)
+    allow_retake = models.BooleanField(default=False)  # Instructor can toggle after a failed attempt
 
     def __str__(self):
-        return f"{self.student.username} - {self.video.title} Quiz ({self.status})"
+        title = self.video.title if self.video else (self.exam.title if self.exam else "Unknown")
+        return f"{self.student.username} - {title} ({self.status})"
+
+class ExamAssignment(models.Model):
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='assignments')
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_assignments')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateTimeField(null=True, blank=True)
+    
+    status = models.CharField(max_length=20, choices=(
+        ('assigned', 'Assigned'),
+        ('completed', 'Completed'),
+    ), default='assigned')
+    
+    final_score = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('exam', 'student')
+
+    def __str__(self):
+        return f"{self.student.username} assigned to {self.exam.title}"
+
+class StudentAnswer(models.Model):
+    session = models.ForeignKey(QuizSession, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(ExamQuestion, on_delete=models.CASCADE)
+    
+    # For MCQ/Multi: list of indices "1,2"
+    selected_options = models.CharField(max_length=50, blank=True, null=True)
+    # For Essay
+    essay_text = models.TextField(blank=True, null=True)
+    
+    is_correct = models.BooleanField(null=True, blank=True)
+    marks_earned = models.FloatField(default=0.0)
+
+    def __str__(self):
+        return f"Answer by {self.session.student.username} to {self.question.id}"
 
 class ProctoringLog(models.Model):
     """

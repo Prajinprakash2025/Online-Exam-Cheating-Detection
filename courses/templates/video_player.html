@@ -114,7 +114,7 @@
                     </div>
                     
                     <p class="text-muted" style="line-height: 1.7;">
-                        In this lesson, we cover the fundamentals necessary to understand the core concepts of {{ course.title }}. Watch carefully and take the quiz below to proceed.
+                        In this lesson, we cover the fundamentals necessary to understand the core concepts of {{ course.title }}. Watch carefully and take the exam below to proceed.
                     </p>
                     
                     <hr class="my-4 opacity-10">
@@ -129,15 +129,47 @@
                                         <i class="fa-solid fa-trophy fs-5" style="color: var(--primary-purple);"></i>
                                     </div>
                                     <div>
-                                        <h5 class="fw-bold mb-0 text-dark">Ready to level up?</h5>
-                                        <p class="mb-0 text-muted small">Complete the quiz to unlock the next lesson.</p>
+                                        {% if pending_review %}
+                                            <h5 class="fw-bold mb-0 text-dark">Awaiting Instructor Approval</h5>
+                                            <p class="mb-0 text-muted small">Your submission passed the exam. The next lesson unlocks after the instructor approves the proctoring review.</p>
+                                        {% elif retake_locked %}
+                                            <h5 class="fw-bold mb-0 text-dark">Retake Locked</h5>
+                                            <p class="mb-0 text-muted small">You need instructor permission for another exam attempt. Please wait while they review and update the question paper.</p>
+                                        {% elif disqualified %}
+                                            <h5 class="fw-bold mb-0 text-dark">Attempt Disqualified</h5>
+                                            <p class="mb-0 text-muted small">Please contact your instructor or retake the exam to proceed.</p>
+                                        {% elif is_passed %}
+                                            <h5 class="fw-bold mb-0 text-dark">Approved & Unlocked</h5>
+                                            <p class="mb-0 text-muted small">Great job! You can move to the next lesson.</p>
+                                        {% else %}
+                                            <h5 class="fw-bold mb-0 text-dark">Ready to level up?</h5>
+                                            <p class="mb-0 text-muted small">Complete the exam to unlock the next lesson.</p>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
                             
-                            <a href="{% url 'take_quiz' video.id %}" class="btn btn-custom rounded-pill px-4 py-2 position-relative shadow-sm" style="z-index: 1;">
-                                Start Quiz <i class="fa-solid fa-arrow-right ms-2"></i>
-                            </a>
+                            {% if pending_review %}
+                                <button class="btn btn-custom rounded-pill px-4 py-2 position-relative shadow-sm opacity-75" style="z-index: 1;" disabled>
+                                    Pending Approval
+                                </button>
+                            {% elif retake_locked %}
+                                <button class="btn btn-custom rounded-pill px-4 py-2 position-relative shadow-sm opacity-75" style="z-index: 1;" disabled>
+                                    Retake Locked
+                                </button>
+                            {% elif disqualified %}
+                                <a href="{% url 'take_quiz' video.id %}" class="btn btn-danger rounded-pill px-4 py-2 position-relative shadow-sm" style="z-index: 1;">
+                                    Retake Exam <i class="fa-solid fa-rotate-right ms-2"></i>
+                                </a>
+                            {% elif is_passed %}
+                                <a href="{% url 'course_viewer' course.id video.order|add:1 %}" class="btn btn-success rounded-pill px-4 py-2 position-relative shadow-sm" style="z-index: 1;">
+                                    Go to Next Lesson <i class="fa-solid fa-arrow-right ms-2"></i>
+                                </a>
+                            {% else %}
+                                <a href="{% url 'take_quiz' video.id %}" class="btn btn-custom rounded-pill px-4 py-2 position-relative shadow-sm" style="z-index: 1;">
+                                    Start Exam <i class="fa-solid fa-arrow-right ms-2"></i>
+                                </a>
+                            {% endif %}
                         </div>
                     {% else %}
                         <div class="d-flex align-items-center justify-content-between p-4 rounded-4 bg-light border-start border-4 border-success shadow-sm">

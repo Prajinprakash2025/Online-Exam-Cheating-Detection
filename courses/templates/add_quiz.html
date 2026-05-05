@@ -77,7 +77,7 @@
         
         <div class="row justify-content-center mb-4">
             <div class="col-lg-8">
-                <a href="{% url 'instructor_dashboard' %}" class="text-decoration-none fw-bold text-muted mb-3 d-inline-block">
+                <a href="{% url back_url|default:'instructor_dashboard' %}" class="text-decoration-none fw-bold text-muted mb-3 d-inline-block">
                     <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
                 </a>
             </div>
@@ -91,8 +91,9 @@
                         <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
                             <i class="fa-solid fa-clipboard-question fs-3" style="color: var(--primary-purple);"></i>
                         </div>
-                        <h4 class="fw-bold mb-1" style="color: var(--primary-dark);">Add Quiz Question</h4>
+                        <h4 class="fw-bold mb-1" style="color: var(--primary-dark);">Add Exam Question</h4>
                         <p class="text-muted small mb-0">For Lesson: <span class="fw-bold text-dark">{{ video.title }}</span></p>
+                        <p class="text-muted small mt-2 mb-0">The latest questions here will be used on the next exam attempt (including instructor-approved retakes).</p>
                     </div>
 
                     <div class="card-body p-4 p-md-5 pt-0">
@@ -149,7 +150,7 @@
                                 </button>
 
                                 <button type="submit" name="save_and_finish" value="true" class="btn btn-custom w-50 rounded-pill py-3 fw-bold shadow-sm">
-                                    Finish Quiz <i class="fa-solid fa-check ms-2"></i>
+                                    Finish Exam <i class="fa-solid fa-check ms-2"></i>
                                 </button>
                             </div>
                         </form>

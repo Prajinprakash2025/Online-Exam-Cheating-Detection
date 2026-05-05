@@ -58,137 +58,141 @@
     }
 </style>
 
+
 <div class="hero-section py-5 mb-5">
     <div class="container py-5 text-center position-relative" style="z-index: 2;">
         
         <span class="badge bg-white text-dark shadow-sm rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase ls-1">
-            <i class="fa-solid fa-bolt text-warning me-2"></i> Elevate Your Career
+            <i class="fa-solid fa-shield-halved text-primary me-2"></i> Trusted AI Proctoring
         </span>
         
         <h1 class="display-3 fw-bolder mb-3 text-dark" style="line-height: 1.1;">
-            Advance your skills with <br> 
-            <span style="color: var(--primary-purple);">World-Class</span> Courses
+            Secure Your Certification with <br> 
+            <span style="color: var(--primary-purple);">Professional</span> Conductors
         </h1>
         
         <p class="lead text-muted mb-5 mx-auto opacity-75" style="max-width: 600px;">
-            Join 25,000+ students learning from the best mentors. Build real projects, earn certificates, and get hired.
+            The industry-leading AI-monitored exam portal. Get certified through our network of verified examiners and secure behavior-tracking technology.
         </p>
         
         <div class="d-flex justify-content-center gap-3 mb-5">
-            <a href="{% url 'signup' %}" class="btn btn-custom btn-lg rounded-pill px-5 fw-bold shadow-sm">
-                Get Started <i class="fa-solid fa-arrow-right ms-2"></i>
+            {% if not user.is_authenticated %}
+            <a href="{% url 'login' %}" class="btn btn-custom btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                Access Your Exams <i class="fa-solid fa-right-to-bracket ms-2"></i>
             </a>
-            <a href="#courses" class="btn btn-outline-custom btn-lg rounded-pill px-5 fw-bold">
-                Explore Courses
+            <a href="{% url 'examiner_signup' %}" class="btn btn-outline-custom btn-lg rounded-pill px-5 fw-bold">
+                Join as Conductor
             </a>
+            {% else %}
+            <a href="{% url 'profile' %}" class="btn btn-custom btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                Go to Dashboard <i class="fa-solid fa-gauge-high ms-2"></i>
+            </a>
+            {% endif %}
         </div>
 
         <div class="d-inline-flex align-items-center bg-white shadow px-4 py-2 rounded-pill">
-            <div class="d-flex me-3">
-                <img src="https://i.pravatar.cc/150?img=1" class="rounded-circle border border-2 border-white" width="35" style="margin-right: -10px;">
-                <img src="https://i.pravatar.cc/150?img=5" class="rounded-circle border border-2 border-white" width="35" style="margin-right: -10px;">
-                <img src="https://i.pravatar.cc/150?img=8" class="rounded-circle border border-2 border-white" width="35">
-            </div>
             <div class="text-start ms-2">
                 <div class="fw-bold d-flex align-items-center text-dark" style="font-size: 0.9rem;">
-                    4.8/5 <i class="fa-solid fa-star text-warning ms-1"></i>
+                    <i class="fa-solid fa-user-check text-success me-2"></i> Verified Conduction Network
                 </div>
-                <small class="text-muted" style="font-size: 0.7rem;">Rated by 25k Students</small>
+                <small class="text-muted" style="font-size: 0.7rem;">Trusted by Global Certification Bodies</small>
             </div>
         </div>
     </div>
 </div>
 
-<div class="container py-5" id="exams">
-    <div class="d-flex justify-content-between align-items-end mb-4">
-        <div>
-            <h2 class="fw-bold display-6 text-dark"><i class="fa-solid fa-shield-halved text-danger me-2"></i> AI Proctored Exams</h2>
-            <p class="text-muted">Test your knowledge in our secure, behavior-monitored environment.</p>
-        </div>
-    </div>
-
-    <div class="row g-4">
-        {% for exam in exams %}
+<!-- SECTION: PORTAL SWITCHER -->
+<div class="container py-5 mt-n5 position-relative" style="z-index: 10;">
+    <div class="row g-4 justify-content-center">
+        <!-- Conductor Card -->
         <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm course-card overflow-hidden" style="border-top: 4px solid var(--primary-purple) !important;">
-                <div class="card-body p-4 d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">
-                            <i class="fa-solid fa-stopwatch me-1"></i> {{ exam.duration_minutes }} Mins
-                        </span>
-                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
-                            <i class="fa-solid fa-camera-web me-1"></i> Live Tracking
-                        </span>
-                    </div>
-                    
-                    <h5 class="fw-bold text-dark mb-1">{{ exam.title }}</h5>
-                    <p class="text-muted small mb-4">Course: {{ exam.course.title }}</p>
-
-                    <div class="mt-auto pt-3 border-top">
-                        <a href="{% url 'take_exam' exam.id %}" class="btn btn-custom w-100 rounded-pill fw-bold py-2 shadow-sm">
-                            Enter Exam Room <i class="fa-solid fa-arrow-right ms-2"></i>
-                        </a>
-                    </div>
+            <div class="card border-0 shadow-lg course-card h-100 p-4 text-center">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px;">
+                    <i class="fa-solid fa-crown fs-4"></i>
+                </div>
+                <h5 class="fw-bold mb-2">Conductor</h5>
+                <p class="text-muted small mb-4">Master management hub for organization admins and board members.</p>
+                <div class="mt-auto">
+                    <a href="{% url 'examiner_login' %}" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Master Portal</a>
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="bg-light p-4 rounded-4 text-center">
-                <p class="text-muted mb-0">No active exams available at the moment.</p>
+        <!-- Teacher Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-lg course-card h-100 p-4 text-center">
+                <div class="bg-teal bg-opacity-10 text-teal rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px; color: #1abc9c;">
+                    <i class="fa-solid fa-chalkboard-user fs-4"></i>
+                </div>
+                <h5 class="fw-bold mb-2">Teacher</h5>
+                <p class="text-muted small mb-4">Instructor dashboard for managing classes, exams, and grading.</p>
+                <div class="mt-auto">
+                    <a href="{% url 'teacher_login' %}" class="btn btn-outline-teal btn-sm rounded-pill px-4 fw-bold" style="border-color: #1abc9c; color: #1abc9c;">Teacher Desk</a>
+                </div>
             </div>
         </div>
-        {% endfor %}
+        <!-- Student Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-lg course-card h-100 p-4 text-center">
+                <div class="bg-warning bg-opacity-10 text-warning rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px;">
+                    <i class="fa-solid fa-user-graduate fs-4"></i>
+                </div>
+                <h5 class="fw-bold mb-2">Student</h5>
+                <p class="text-muted small mb-4">Candidate portal for taking proctored exams and certifications.</p>
+                <div class="mt-auto">
+                    <a href="{% url 'login' %}" class="btn btn-outline-warning btn-sm rounded-pill px-4 fw-bold">Student Hall</a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-<div class="container py-5" id="courses">
+<div class="container py-5" id="conductors">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-end mb-5">
         <div>
-            <h2 class="fw-bold display-6 text-dark">Popular Courses</h2>
-            <p class="text-muted">Explore our top-rated content selected for you.</p>
+            <h2 class="fw-bold display-6 text-dark">Meet Our Exam Conductors</h2>
+            <p class="text-muted">Verified professionals and examiners managing secure certification sessions.</p>
         </div>
-        <div class="d-flex gap-2 mt-3 mt-md-0 overflow-auto">
-            <button class="btn btn-dark rounded-pill px-4">All Courses</button>
-            <button class="btn btn-light rounded-pill px-4">Development</button>
-            <button class="btn btn-light rounded-pill px-4">Design</button>
+        <div class="d-flex gap-2 mt-3 mt-md-0">
+            <a href="{% url 'mentors' %}" class="btn btn-light rounded-pill px-4 fw-bold">View All Conductors</a>
         </div>
     </div>
 
     <div class="row g-4">
-        {% for course in courses %}
+        {% for conductor in conductors %}
         <div class="col-md-6 col-lg-3">
             <div class="card h-100 border-0 shadow-sm course-card overflow-hidden">
-                <div class="position-relative">
-                    {% if course.thumbnail %}
-                        <img src="{{ course.thumbnail.url }}" class="w-100" style="height: 180px; object-fit: cover;">
+                <div class="position-relative text-center pt-4">
+                    {% if conductor.profile_picture %}
+                        <img src="{{ conductor.profile_picture.url }}" class="rounded-circle shadow-sm border border-3 border-white" style="width: 120px; height: 120px; object-fit: cover;">
                     {% else %}
-                        <div class="d-flex align-items-center justify-content-center bg-light text-muted" style="height: 180px;">
-                            <i class="fa-solid fa-image fs-1 opacity-25"></i>
+                        <div class="d-flex align-items-center justify-content-center bg-light text-muted rounded-circle mx-auto shadow-sm" style="width: 120px; height: 120px;">
+                            <i class="fa-solid fa-user-tie fs-1 opacity-25"></i>
                         </div>
                     {% endif %}
                     
-                    <span class="position-absolute top-0 end-0 m-3 badge bg-white text-dark shadow-sm px-2 py-1 rounded-3">
-                        <i class="fa-solid fa-video me-1 text-primary"></i> {{ course.video_count }} Videos
+                    {% if conductor.is_examiner %}
+                    <span class="position-absolute bottom-0 start-50 translate-middle-x badge bg-primary text-white shadow-sm px-3 py-1 rounded-pill" style="margin-bottom: -10px;">
+                        <i class="fa-solid fa-award me-1"></i> Conductor
                     </span>
+                    {% else %}
+                    <span class="position-absolute bottom-0 start-50 translate-middle-x badge bg-info text-white shadow-sm px-3 py-1 rounded-pill" style="margin-bottom: -10px;">
+                        <i class="fa-solid fa-chalkboard-user me-1"></i> Teacher
+                    </span>
+                    {% endif %}
                 </div>
 
-                <div class="card-body p-4 d-flex flex-column">
-                    <small class="text-uppercase fw-bold mb-2" style="color: var(--primary-purple); font-size: 0.7rem; letter-spacing: 1px;">Development</small>
+                <div class="card-body p-4 text-center mt-3">
+                    <h5 class="fw-bold text-dark mb-1">{{ conductor.first_name }} {{ conductor.last_name|default:conductor.username }}</h5>
+                    <p class="text-primary small fw-bold mb-3">{{ conductor.specialty|default:"Certified Conductor" }}</p>
                     
-                    <h5 class="fw-bold text-dark mb-2 text-truncate">{{ course.title }}</h5>
-                    <p class="text-muted small mb-4 line-clamp-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                        {{ course.description }}
+                    <p class="text-muted small mb-4 line-clamp-2" style="height: 40px; overflow: hidden;">
+                        {{ conductor.bio|default:"Professional exam conductor and proctoring specialist." }}
                     </p>
                     
-                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <i class="fa-solid fa-star text-warning me-1"></i>
-                            <span class="fw-bold small text-dark">4.8</span>
-                            <span class="text-muted small ms-1">(1.2k)</span>
+                    <div class="pt-3 border-top d-flex justify-content-center align-items-center">
+                        <div class="d-flex align-items-center text-muted small">
+                            <i class="fa-solid fa-briefcase me-2"></i>
+                            <span>{{ conductor.experience_years }} Years Exp.</span>
                         </div>
-                        <a href="{% url 'course_viewer' course.id 1 %}" class="btn btn-sm btn-dark rounded-pill px-3">
-                            Start <i class="fa-solid fa-play ms-1" style="font-size: 0.7rem;"></i>
-                        </a>
                     </div>
                 </div>
             </div>
@@ -196,40 +200,67 @@
         {% empty %}
         <div class="col-12 text-center py-5">
             <div class="bg-light p-5 rounded-4">
-                <i class="fa-solid fa-box-open fs-1 text-muted mb-3"></i>
-                <h5 class="text-muted">No courses available yet.</h5>
-                <p class="small text-muted">Check back later or contact the instructor.</p>
+                <i class="fa-solid fa-users-slash fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No conductors available at the moment.</h5>
+                <p class="small text-muted">Please check back later.</p>
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<div class="container my-5 pb-5">
-    <div class="newsletter-box p-5 rounded-5 text-white position-relative overflow-hidden">
-        
-        <div class="position-absolute rounded-circle bg-white opacity-10" style="width: 300px; height: 300px; top: -100px; right: -50px;"></div>
-        
-        <div class="row align-items-center position-relative" style="z-index: 2;">
-            <div class="col-lg-6">
-                <span class="badge bg-white bg-opacity-25 text-white mb-3 px-3 py-2 rounded-pill">
-                    <i class="fa-regular fa-bell me-2"></i> Weekly Updates
-                </span>
-                <h2 class="fw-bold display-5 mb-3">Join Our Newsletter</h2>
-                <p class="lead mb-4 opacity-75">Subscribe to get free tutorials, updates, and discount codes directly to your inbox.</p>
-                
-                <form class="d-flex gap-2">
-                    <input type="email" class="form-control form-control-lg rounded-pill border-0 px-4" placeholder="Enter your email address">
-                    <button class="btn btn-dark btn-lg rounded-pill px-4 shadow-sm">Subscribe</button>
-                </form>
-                <p class="small opacity-50 mt-3 mb-0">* No spam. Unsubscribe anytime.</p>
-            </div>
+<!-- SECTION: TECHNOLOGY -->
+<div class="container py-5 my-5">
+    <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+            <h2 class="fw-bold display-5 mb-4">State-of-the-art <br><span class="text-primary">AI Proctoring</span></h2>
+            <p class="lead text-muted mb-4">Our portal uses advanced machine learning to ensure exam integrity and fairness for all candidates.</p>
             
-            <div class="col-lg-6 d-none d-lg-flex justify-content-end">
-                <i class="fa-solid fa-paper-plane text-white opacity-25" style="font-size: 180px; transform: rotate(-10deg);"></i>
+            <ul class="list-unstyled">
+                <li class="mb-3 d-flex align-items-center">
+                    <i class="fa-solid fa-circle-check text-success me-3 fs-5"></i>
+                    <span><strong>Face & Gaze Tracking:</strong> Real-time behavioral monitoring.</span>
+                </li>
+                <li class="mb-3 d-flex align-items-center">
+                    <i class="fa-solid fa-circle-check text-success me-3 fs-5"></i>
+                    <span><strong>Environment Scanning:</strong> Detection of multiple persons or devices.</span>
+                </li>
+                <li class="mb-3 d-flex align-items-center">
+                    <i class="fa-solid fa-circle-check text-success me-3 fs-5"></i>
+                    <span><strong>Automated Flagging:</strong> instant logs for conductor review.</span>
+                </li>
+            </ul>
+        </div>
+        <div class="col-lg-6">
+            <div class="bg-light p-5 rounded-5 shadow-sm border text-center">
+                <i class="fa-solid fa-video text-danger fs-1 mb-4"></i>
+                <h4 class="fw-bold">Secured Live Feed</h4>
+                <p class="text-muted small">candidate's webcam feed is processed locally for privacy while maintaining absolute security.</p>
+                <div class="mt-4 pt-4 border-top">
+                    <div class="badge bg-white text-dark p-3 rounded-pill shadow-sm">
+                        <i class="fa-solid fa-lock text-warning me-2"></i> AES-256 Encrypted Logs
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<div class="container my-5 pb-5">
+    <div class="newsletter-box p-5 rounded-5 text-white position-relative overflow-hidden">
+        <div class="position-absolute rounded-circle bg-white opacity-10" style="width: 300px; height: 300px; top: -100px; right: -50px;"></div>
+        <div class="row align-items-center position-relative" style="z-index: 2;">
+            <div class="col-lg-12 text-center">
+                <h2 class="fw-bold display-5 mb-3">Ready to Conduct Your First Exam?</h2>
+                <p class="lead mb-4 opacity-75">Join our platform today and experience the future of secure certifications.</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'login' %}" class="btn btn-white btn-lg rounded-pill px-5 fw-bold bg-white text-primary text-decoration-none">Sign In Now</a>
+                    <a href="{% url 'contact' %}" class="btn btn-outline-light btn-lg rounded-pill px-5 fw-bold">Contact Enterprise</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 {% endblock %}

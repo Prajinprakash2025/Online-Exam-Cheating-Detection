@@ -30,7 +30,7 @@
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
             <div>
                 <p class="mb-1 text-white-50 fw-bold small">Proctoring</p>
-                <h2 class="fw-bolder mb-0">Review Proctored Quiz Sessions</h2>
+                <h2 class="fw-bolder mb-0">Review Proctored Exam Sessions</h2>
             </div>
             <a href="{% url 'instructor_dashboard' %}" class="btn btn-light text-dark fw-bold rounded-pill px-4 mt-3 mt-md-0">
                 ← Back to Dashboard
@@ -54,7 +54,7 @@
                     <thead class="bg-light">
                         <tr>
                             <th class="ps-4 py-3">Student</th>
-                            <th class="py-3">Quiz Lesson</th>
+                            <th class="py-3">Exam Lesson</th>
                             <th class="py-3">Status</th>
                             <th class="py-3">AI Flags</th>
                             <th class="py-3 pe-4 text-end">Action</th>
@@ -86,7 +86,7 @@
                         {% empty %}
                         <tr>
                             <td colspan="5" class="text-center py-5 text-muted">
-                                No completed proctored quizzes yet.
+                                No completed proctored exams yet.
                             </td>
                         </tr>
                         {% endfor %}

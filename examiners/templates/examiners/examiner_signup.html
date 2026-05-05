@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --eg-purple: #8e44ad;
+        --eg-dark: #2c3e50;
+        --eg-bg: #f0f2f5;
+        --glass-bg: rgba(255, 255, 255, 0.95);
+    }
+
+    body {
+        background-color: var(--eg-bg);
+        margin: 0;
+        padding: 0;
+    }
+
+    .auth-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+    }
+
+    .auth-card {
+        background: var(--glass-bg);
+        border-radius: 30px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        width: 100%;
+        max-width: 1100px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(20px);
+    }
+
+    /* Left Side: Branded Hero */
+    .auth-hero {
+        flex: 1.1;
+        background: linear-gradient(135deg, rgba(44, 62, 80, 0.9) 0%, rgba(142, 68, 173, 0.8) 100%), 
+                    url("{% static 'img/examiner_signup_hero.png' %}");
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        display: none;
+        padding: 60px;
+        color: white;
+    }
+
+    @media (min-width: 992px) {
+        .auth-hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+    }
+
+    .brand-logo {
+        background: white;
+        color: var(--eg-purple);
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .hero-content h1 {
+        font-weight: 800;
+        font-size: 3rem;
+        line-height: 1.1;
+        letter-spacing: -1.5px;
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 12px 20px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 12px;
+        backdrop-filter: blur(10px);
+        transition: transform 0.3s;
+    }
+
+    .hero-feature:hover {
+        transform: translateX(10px);
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Right Side: Form */
+    .auth-form-side {
+        flex: 1;
+        padding: 60px;
+        background: white;
+    }
+
+    .form-header h2 {
+        color: var(--eg-dark);
+        font-weight: 800;
+        font-size: 1.75rem;
+        margin-bottom: 8px;
+    }
+
+    .form-header p {
+        color: #64748b;
+        margin-bottom: 40px;
+    }
+
+    /* Universal Input Styling */
+    input, select, textarea, .form-control {
+        width: 100%;
+        padding: 14px 20px;
+        background-color: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 14px;
+        font-weight: 600;
+        color: var(--eg-dark);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 0.95rem;
+        outline: none;
+    }
+
+    input:focus, select:focus, .form-control:focus {
+        background-color: white;
+        border-color: var(--eg-purple);
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .form-label {
+        font-weight: 700;
+        color: var(--eg-dark);
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+        display: block;
+        margin-left: 4px;
+    }
+
+    .btn-submit {
+        background: var(--eg-purple);
+        color: white;
+        border: none;
+        padding: 16px;
+        border-radius: 14px;
+        font-weight: 800;
+        font-size: 1rem;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+        margin-top: 20px;
+        box-shadow: 0 10px 15px -3px rgba(142, 68, 173, 0.3);
+    }
+
+    .btn-submit:hover {
+        background: #732d91;
+        transform: translateY(-2px);
+        box-shadow: 0 20px 25px -5px rgba(142, 68, 173, 0.5);
+        color: white;
+    }
+
+    .link-footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .link-footer a {
+        color: var(--eg-purple);
+        text-decoration: none;
+        font-weight: 800;
+    }
+
+    .error-msg {
+        color: #ef4444;
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin-top: 6px;
+        margin-left: 4px;
+    }
+
+    /* Grid layout */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .col-full { grid-column: span 2; }
+    
+    @media (max-width: 576px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .col-full { grid-column: span 1; }
+    }
+</style>
+
+<div class="auth-page">
+    <div class="auth-card">
+        
+        <!-- Hero Section -->
+        <div class="auth-hero">
+            <div>
+                <a href="{% url 'home' %}" class="brand-logo text-decoration-none">EG</a>
+                <div class="hero-content">
+                    <h1>Join the <br>Future of <br>Assessment</h1>
+                    <p class="lead opacity-75">Secure, AI-powered proctoring for the next generation of certifications.</p>
+                </div>
+            </div>
+            
+            <div class="hero-features">
+                <div class="hero-feature">
+                    <i class="fa-solid fa-shield-halved fs-5"></i>
+                    <span class="small fw-bold">Advanced Shield Technology</span>
+                </div>
+                <div class="hero-feature">
+                    <i class="fa-solid fa-bolt fs-5"></i>
+                    <span class="small fw-bold">Real-time AI Analysis</span>
+                </div>
+                <div class="hero-feature">
+                    <i class="fa-solid fa-globe fs-5"></i>
+                    <span class="small fw-bold">Global Certification Standards</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="auth-form-side">
+            <div class="form-header">
+                <h2>Create Conductor Account</h2>
+                <p>Access the master panel to manage subjects and teachers.</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-grid">
+                    {% for field in form %}
+                    <div class="{% if field.name == 'email' %}col-full{% endif %}">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="error-msg"><i class="fa-solid fa-circle-exclamation me-1"></i> {{ field.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-submit w-100">
+                    GET STARTED NOW <i class="fa-solid fa-arrow-right ms-2"></i>
+                </button>
+
+                <div class="link-footer">
+                    Already a conductor? <a href="{% url 'examiner_login' %}">Sign In</a>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
