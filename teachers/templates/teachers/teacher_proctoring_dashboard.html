@@ -2,102 +2,217 @@
 {% block footer %}{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <div>
-            <h4 class="fw-bold mb-1">Assessment Hub</h4>
-            <p class="text-muted mb-0">Review integrity logs and grade submissions for your students.</p>
-        </div>
-        <a href="{% url 'teacher_dashboard' %}" class="btn btn-outline-secondary rounded-pill fw-bold">
-            <i class="fa-solid fa-arrow-left me-2"></i> Dashboard
-        </a>
-    </div>
-</div>
+<style>
+    :root {
+        --primary-dark: #2c3e50;
+        --primary-teal: #1abc9c;
+        --sidebar-width: 280px;
+        --bg-light: #f8fafc;
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
 
-<div class="row g-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-header bg-white border-0 py-3">
-                <h6 class="fw-bold mb-0"><i class="fa-solid fa-list-check me-2 text-primary"></i> Submissions for Review</h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="border-0 px-4">Student</th>
-                                <th class="border-0">Type</th>
-                                <th class="border-0">Subject / Course</th>
-                                <th class="border-0 text-center">Score</th>
-                                <th class="border-0">Integrity Status</th>
-                                <th class="border-0 text-end px-4">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for session in sessions %}
-                            <tr>
-                                <td class="px-4">
-                                    <div class="fw-bold text-dark">{{ session.student.first_name }} {{ session.student.last_name }}</div>
-                                    <small class="text-muted">{{ session.student.email }}</small>
-                                </td>
-                                <td>
-                                    {% if session.exam %}
-                                        <span class="badge bg-purple bg-opacity-10 text-purple border px-3 rounded-pill" style="color: #8e44ad; border-color: #8e44ad !important;">FULL EXAM</span>
-                                    {% else %}
-                                        <span class="badge bg-teal bg-opacity-10 text-teal border px-3 rounded-pill" style="color: #1abc9c; border-color: #1abc9c !important;">LESSON QUIZ</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="fw-bold text-dark">
-                                        {% if session.video %}{{ session.video.title }}{% else %}{{ session.exam.title }}{% endif %}
-                                    </div>
-                                    <small class="text-muted">
-                                        {% if session.video %}{{ session.video.course.title }}{% else %}{{ session.exam.course.title }}{% endif %}
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    {% if not session.is_reviewed %}
-                                        <span class="badge bg-warning bg-opacity-10 text-warning px-2 rounded-pill small">Evaluation Required</span>
-                                    {% else %}
-                                        <h6 class="mb-0 fw-bold">{{ session.score|floatformat:0 }}%</h6>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if session.status == 'flagged' %}
-                                        <span class="badge bg-danger rounded-pill px-3 shadow-sm">Suspicious Activity</span>
-                                    {% elif session.status == 'disqualified' %}
-                                        <span class="badge bg-dark rounded-pill px-3">Invalidated</span>
-                                    {% elif session.is_reviewed %}
-                                        <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 rounded-pill"><i class="fa-solid fa-check me-1"></i> Verified</span>
-                                    {% else %}
-                                        <span class="badge bg-light text-muted border px-3 rounded-pill">Pending Review</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end px-4">
-                                    {% if session.exam %}
-                                        <a href="{% url 'grade_exam_session' session.id %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
-                                            {% if session.is_reviewed %}Review Grade{% else %}Evaluate & Grade{% endif %}
-                                        </a>
-                                    {% else %}
-                                        <a href="{% url 'teacher_review_exam' session.id %}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
-                                            Integrity Check
-                                        </a>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-5">
-                                    <i class="fa-solid fa-inbox display-6 d-block mb-3 opacity-25"></i>
-                                    No completed assessment sessions found for your students.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    body {
+        background-color: var(--bg-light);
+    }
+
+    .dashboard-container {
+        display: flex;
+        min-height: calc(100vh - 70px);
+    }
+
+    .dashboard-sidebar {
+        width: var(--sidebar-width);
+        background: white;
+        border-right: 1px solid #e2e8f0;
+        padding: 2rem 1.5rem;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        height: calc(100vh - 70px);
+    }
+
+    .sidebar-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0.875rem 1.25rem;
+        color: #64748b;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        margin-bottom: 0.5rem;
+    }
+
+    .sidebar-link:hover,
+    .sidebar-link.active {
+        background: rgba(26, 188, 156, 0.1);
+        color: var(--primary-teal);
+    }
+
+    .dashboard-main {
+        flex-grow: 1;
+        padding: 2rem 3rem;
+        min-width: 0;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 24px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+    }
+
+    .table-custom th {
+        background: #f8fafc;
+        border: none;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem 1.5rem;
+    }
+
+    .table-custom td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+        border-top: 1px solid #f1f5f9;
+    }
+</style>
+
+<div class="dashboard-container">
+    <nav class="dashboard-sidebar shadow-sm">
+        <div class="mb-5 px-3">
+            <h5 class="fw-bold mb-0">Teacher <span style="color: var(--primary-teal)">Portal</span></h5>
+            <small class="text-muted">Assessment Expert</small>
+        </div>
+
+        <div class="nav-links">
+            <a href="{% url 'teacher_dashboard' %}#overview" class="sidebar-link">
+                <i class="fa-solid fa-gauge-high"></i> Overview
+            </a>
+            <a href="{% url 'teacher_dashboard' %}#students" class="sidebar-link">
+                <i class="fa-solid fa-user-graduate"></i> My Students
+            </a>
+            <a href="{% url 'teacher_dashboard' %}#subjects" class="sidebar-link">
+                <i class="fa-solid fa-book-bookmark"></i> My Subjects
+            </a>
+            <a href="{% url 'teacher_dashboard' %}#exams" class="sidebar-link">
+                <i class="fa-solid fa-file-signature"></i> Manage Exams
+            </a>
+            <div class="sidebar-divider my-3 border-top opacity-50"></div>
+            <a href="{% url 'teacher_proctoring_dashboard' %}" class="sidebar-link active">
+                <i class="fa-solid fa-eye"></i> Live Monitoring
+            </a>
+        </div>
+
+        <div class="mt-auto border-top pt-4 px-3">
+            <div class="d-flex align-items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=1abc9c&color=fff"
+                     class="rounded-circle" style="width: 40px; height: 40px;">
+                <div class="overflow-hidden">
+                    <p class="mb-0 fw-bold small text-truncate">{{ user.username }}</p>
+                    <a href="{% url 'teacher_logout' %}" class="small text-danger text-decoration-none fw-bold">Logout</a>
                 </div>
             </div>
         </div>
-    </div>
+    </nav>
+
+    <main class="dashboard-main">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">Assessment Hub</h3>
+                <p class="text-muted mb-0">Review integrity logs and grade submissions for your students.</p>
+            </div>
+            <a href="{% url 'teacher_dashboard' %}" class="btn btn-outline-secondary rounded-pill fw-bold">
+                <i class="fa-solid fa-arrow-left me-2"></i> Dashboard
+            </a>
+        </div>
+
+        <div class="glass-card">
+            <div class="p-4 border-bottom bg-white">
+                <h5 class="fw-bold mb-0"><i class="fa-solid fa-list-check me-2 text-primary"></i> Submissions for Review</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Type</th>
+                            <th>Subject / Course</th>
+                            <th class="text-center">Score</th>
+                            <th>Integrity Status</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ session.student.first_name }} {{ session.student.last_name }}</div>
+                                <small class="text-muted">{{ session.student.email }}</small>
+                            </td>
+                            <td>
+                                {% if session.exam %}
+                                    <span class="badge bg-light border px-3 rounded-pill" style="color: #8e44ad; border-color: #8e44ad !important;">FULL EXAM</span>
+                                {% else %}
+                                    <span class="badge bg-light border px-3 rounded-pill" style="color: #1abc9c; border-color: #1abc9c !important;">LESSON QUIZ</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">
+                                    {% if session.video %}{{ session.video.title }}{% elif session.exam %}{{ session.exam.title }}{% else %}Unknown Assessment{% endif %}
+                                </div>
+                                <small class="text-muted">
+                                    {% if session.video %}{{ session.video.course.title }}{% elif session.exam %}{{ session.exam.course.title }}{% else %}Unknown Subject{% endif %}
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                {% if not session.is_reviewed %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning px-2 rounded-pill small">Evaluation Required</span>
+                                {% else %}
+                                    <h6 class="mb-0 fw-bold">{{ session.score|floatformat:0 }}%</h6>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if session.status == 'flagged' %}
+                                    <span class="badge bg-danger rounded-pill px-3 shadow-sm">Suspicious Activity</span>
+                                {% elif session.status == 'disqualified' %}
+                                    <span class="badge bg-dark rounded-pill px-3">Invalidated</span>
+                                {% elif session.is_reviewed %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 rounded-pill"><i class="fa-solid fa-check me-1"></i> Verified</span>
+                                {% else %}
+                                    <span class="badge bg-light text-muted border px-3 rounded-pill">Pending Review</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if session.exam %}
+                                    <a href="{% url 'grade_exam_session' session.id %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                                        {% if session.is_reviewed %}Review Grade{% else %}Evaluate & Grade{% endif %}
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'teacher_review_exam' session.id %}" class="btn btn-outline-primary rounded-pill px-4 fw-bold">
+                                        Integrity Check
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <i class="fa-solid fa-inbox display-6 d-block mb-3 opacity-25"></i>
+                                No completed assessment sessions found for your students.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 </div>
 {% endblock %}

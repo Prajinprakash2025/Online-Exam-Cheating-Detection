@@ -7,12 +7,9 @@ from .models import ExaminerTeacherAssignment
 User = get_user_model()
 
 class ExaminerSignupForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, label="Password")
-    confirm_password = forms.CharField(widget=forms.PasswordInput, label="Confirm Password")
-
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'password']
+        fields = ['email', 'first_name', 'last_name']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -22,25 +19,33 @@ class ExaminerSignupForm(forms.ModelForm):
                 'placeholder': self.fields[field].label
             })
 
-    def clean(self):
-        cleaned_data = super().clean()
-        pwd = cleaned_data.get("password")
-        cpwd = cleaned_data.get("confirm_password")
-        if pwd and cpwd and pwd != cpwd:
-            self.add_error('confirm_password', "Passwords do not match!")
-        return cleaned_data
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("A conductor account already exists with this email.")
+        return email
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password'])
+        user.set_unusable_password()
         user.is_examiner = True
         user.is_student = False
         user.is_staff = False
         # Use email prefix as username
-        user.username = self.cleaned_data['email'].split('@')[0]
+        user.username = self._unique_username(self.cleaned_data['email'])
         if commit:
             user.save()
         return user
+
+    def _unique_username(self, email):
+        base = (email.split('@')[0] or 'conductor')[:140]
+        username = base
+        counter = 1
+        while User.objects.filter(username__iexact=username).exists():
+            suffix = f"-{counter}"
+            username = f"{base[:150 - len(suffix)]}{suffix}"
+            counter += 1
+        return username
 class ExaminerStudentCreateForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput, label="Password")
     conductor = forms.ModelChoiceField(queryset=User.objects.none(), label="Assign to Conductor")
@@ -66,6 +71,12 @@ class ExaminerStudentCreateForm(forms.ModelForm):
                 'placeholder': self.fields[field].label
             })
 
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("A user already exists with this email.")
+        return email
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password'])
@@ -75,7 +86,7 @@ class ExaminerStudentCreateForm(forms.ModelForm):
         user.is_staff = False
         user.is_active = True
         # Use email prefix as username
-        user.username = self.cleaned_data['email'].split('@')[0]
+        user.username = self._unique_username(self.cleaned_data['email'])
         if commit:
             user.save()
             # Create assignment
@@ -85,6 +96,16 @@ class ExaminerStudentCreateForm(forms.ModelForm):
                 course=self.cleaned_data['course']
             )
         return user
+
+    def _unique_username(self, email):
+        base = (email.split('@')[0] or 'candidate')[:140]
+        username = base
+        counter = 1
+        while User.objects.filter(username__iexact=username).exists():
+            suffix = f"-{counter}"
+            username = f"{base[:150 - len(suffix)]}{suffix}"
+            counter += 1
+        return username
 
 class SubjectForm(forms.ModelForm):
     class Meta:

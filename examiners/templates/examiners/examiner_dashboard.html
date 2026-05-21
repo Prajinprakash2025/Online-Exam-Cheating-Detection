@@ -193,7 +193,7 @@
         margin-bottom: 1.5rem;
     }
 
-    .form-eg-input, .modal-body input, .modal-body select {
+    .form-eg-input, .modal-body input, .modal-body select, .modal-body textarea {
         border-radius: 14px !important;
         padding: 12px 20px !important;
         background-color: #f8fafc !important;
@@ -206,11 +206,18 @@
         margin-bottom: 5px;
     }
 
-    .modal-body input:focus, .modal-body select:focus {
+    .modal-body input:focus, .modal-body select:focus, .modal-body textarea:focus {
         background-color: white !important;
         border-color: var(--primary-purple) !important;
         box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1) !important;
         transform: translateY(-2px);
+    }
+
+    .field-error {
+        color: #dc2626;
+        font-size: 0.78rem;
+        font-weight: 700;
+        margin-top: 6px;
     }
 
     .btn-eg-submit {
@@ -250,6 +257,9 @@
             </a>
             <a onclick="switchSection('subjects', this)" class="sidebar-link">
                 <i class="fa-solid fa-book-bookmark"></i> Exam Subjects
+            </a>
+            <a onclick="switchSection('exams', this)" class="sidebar-link">
+                <i class="fa-solid fa-file-signature"></i> Manage Exams
             </a>
             <div class="sidebar-divider my-3 border-top opacity-50"></div>
             <a onclick="switchSection('monitoring', this)" class="sidebar-link">
@@ -316,6 +326,15 @@
                         </div>
                         <h2 class="fw-bold mb-1">{{ flagged_count }}</h2>
                         <p class="text-muted small mb-0 fw-bold">Integrity Alerts</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ review_count }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Need Evaluation</p>
                     </div>
                 </div>
             </div>
@@ -415,6 +434,9 @@
                         <h5 class="mb-0 fw-bold">Assigned Candidates</h5>
                         <p class="text-muted smaller mb-0">Supervised students: {{ total_candidates }}</p>
                     </div>
+                    <button data-bs-toggle="modal" data-bs-target="#registerCandidateModal" class="btn btn-purple btn-sm rounded-pill px-4 fw-bold">
+                        <i class="fa-solid fa-user-plus me-1"></i> Add Candidate
+                    </button>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom mb-0">
@@ -423,7 +445,9 @@
                                 <th>Candidate</th>
                                 <th>Assigned Teacher</th>
                                 <th>Assessment Subject</th>
-                                <th class="text-end">Status</th>
+                                <th>Exam Control</th>
+                                <th>Integrity</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -435,6 +459,37 @@
                                 </td>
                                 <td><i class="fa-solid fa-chalkboard-user me-1"></i> {{ assignment.teacher.username }}</td>
                                 <td><span class="badge bg-light text-dark border">{{ assignment.course.title }}</span></td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">{{ assignment.assigned_exam_count }} Assigned</span>
+                                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">{{ assignment.submitted_exam_count }} Waiting</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill">{{ assignment.completed_exam_count }} Published</span>
+                                    </div>
+                                    {% if assignment.assigned_exams %}
+                                        <div class="small text-muted">
+                                            Latest:
+                                            {% for exam_assignment in assignment.assigned_exams|slice:":2" %}
+                                                <span class="fw-semibold text-dark">{{ exam_assignment.exam.title }}</span>{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="small text-muted">No exam assigned yet.</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if assignment.flagged_session_count %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill">
+                                            <i class="fa-solid fa-triangle-exclamation me-1"></i>{{ assignment.flagged_session_count }} Flagged
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">
+                                            <i class="fa-solid fa-shield-check me-1"></i>Clean
+                                        </span>
+                                    {% endif %}
+                                    {% if assignment.review_session_count %}
+                                        <div class="small text-warning fw-bold mt-2">{{ assignment.review_session_count }} needs review</div>
+                                    {% endif %}
+                                </td>
                                 <td class="text-end">
                                     <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-1"
                                             onclick="openEditCandidateModal('{{ assignment.student.id }}', '{{ assignment.student.first_name }}', '{{ assignment.student.last_name }}', '{{ assignment.student.email }}')">
@@ -446,6 +501,9 @@
                                 </td>
                             </tr>
                             {% endfor %}
+                            {% if not candidates %}
+                            <tr><td colspan="6" class="text-center py-5 text-muted">No candidates assigned to your portal.</td></tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -488,10 +546,139 @@
                 </div>
             </div>
         </div>
+
+        <div id="section-exams" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0 fw-bold">Master Exam Papers</h5>
+                        <p class="text-muted smaller mb-0">Create assessment papers and assign them to managed candidates.</p>
+                    </div>
+                    <button data-bs-toggle="modal" data-bs-target="#createExamModal" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-file-circle-plus me-1"></i> Create Exam
+                    </button>
+                </div>
+                {% if exams %}
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Exam Title</th>
+                                <th>Subject</th>
+                                <th>Details</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exam in exams %}
+                            <tr>
+                                <td><div class="fw-bold">{{ exam.title }}</div></td>
+                                <td>{{ exam.course.title }}</td>
+                                <td>
+                                    <span class="small text-muted">{{ exam.questions.count }} Questions | {{ exam.duration_minutes }} Mins</span>
+                                </td>
+                                <td class="text-end">
+                                    <button onclick="openAssignExamModal('{{ exam.id }}', '{{ exam.title|escapejs }}')" class="btn btn-sm btn-primary rounded-pill px-3 me-1">
+                                        <i class="fa-solid fa-paper-plane me-1"></i> Assign
+                                    </button>
+                                    <a href="{% url 'examiner_exam_questions' exam.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1">
+                                        <i class="fa-solid fa-list-check"></i> Q
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-warning rounded-pill px-3 me-1"
+                                            onclick="openEditExamModal('{{ exam.id }}', '{{ exam.title|escapejs }}', '{{ exam.duration_minutes }}', '{{ exam.passing_score }}', '{{ exam.description|escapejs }}')">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                    <a href="{% url 'examiner_delete_exam' exam.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Delete this exam paper?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="fa-solid fa-file-circle-xmark fs-1 mb-3 opacity-25"></i>
+                    <p>No exam papers created yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </main>
 </div>
 
 <!-- Modals -->
+<div class="modal fade" id="registerCandidateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-5">
+                <div class="text-center mb-5">
+                    <div class="modal-eg-icon bg-info bg-opacity-10 text-info mx-auto">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <h4 class="fw-bold">Register New Candidate</h4>
+                    <p class="text-muted">Create the candidate login and assign them to a teacher and subject.</p>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="register_candidate">
+                    {% if candidate_form.non_field_errors %}
+                        <div class="alert alert-danger rounded-4 fw-semibold small">
+                            {{ candidate_form.non_field_errors|striptags }}
+                        </div>
+                    {% endif %}
+                    <div class="row g-4 d-flex">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">First Name</label>
+                            <input type="text" name="first_name" class="form-control" placeholder="Candidate first name" value="{{ candidate_form.first_name.value|default_if_none:'' }}" required>
+                            {% if candidate_form.first_name.errors %}
+                                <div class="field-error">{{ candidate_form.first_name.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Last Name</label>
+                            <input type="text" name="last_name" class="form-control" placeholder="Candidate last name" value="{{ candidate_form.last_name.value|default_if_none:'' }}" required>
+                            {% if candidate_form.last_name.errors %}
+                                <div class="field-error">{{ candidate_form.last_name.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Email Address</label>
+                            <input type="email" name="email" class="form-control" placeholder="candidate@example.com" value="{{ candidate_form.email.value|default_if_none:'' }}" required>
+                            {% if candidate_form.email.errors %}
+                                <div class="field-error">{{ candidate_form.email.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Password" required>
+                            {% if candidate_form.password.errors %}
+                                <div class="field-error">{{ candidate_form.password.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Assign to Teacher</label>
+                            {{ candidate_form.conductor }}
+                            {% if candidate_form.conductor.errors %}
+                                <div class="field-error">{{ candidate_form.conductor.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Exam Subject</label>
+                            {{ candidate_form.course }}
+                            {% if candidate_form.course.errors %}
+                                <div class="field-error">{{ candidate_form.course.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-eg-submit w-100 mt-5">REGISTER CANDIDATE</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="registerTeacherModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -506,18 +693,32 @@
                 <form method="POST">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="register_conductor">
+                    {% if teacher_form.non_field_errors %}
+                        <div class="alert alert-danger rounded-4 fw-semibold small">
+                            {{ teacher_form.non_field_errors|striptags }}
+                        </div>
+                    {% endif %}
                     <div class="row g-4 d-flex">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">First Name</label>
-                            <input type="text" name="first_name" class="form-control" placeholder="John" required>
+                            <input type="text" name="first_name" class="form-control" placeholder="John" value="{{ teacher_form.first_name.value|default_if_none:'' }}" required>
+                            {% if teacher_form.first_name.errors %}
+                                <div class="field-error">{{ teacher_form.first_name.errors|striptags }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Last Name</label>
-                            <input type="text" name="last_name" class="form-control" placeholder="Doe" required>
+                            <input type="text" name="last_name" class="form-control" placeholder="Doe" value="{{ teacher_form.last_name.value|default_if_none:'' }}" required>
+                            {% if teacher_form.last_name.errors %}
+                                <div class="field-error">{{ teacher_form.last_name.errors|striptags }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold">Email Address</label>
-                            <input type="email" name="email" class="form-control" placeholder="teacher@example.com" required>
+                            <input type="email" name="email" class="form-control" placeholder="teacher@example.com" value="{{ teacher_form.email.value|default_if_none:'' }}" required>
+                            {% if teacher_form.email.errors %}
+                                <div class="field-error">{{ teacher_form.email.errors|striptags }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold">Password</label>
@@ -553,6 +754,121 @@
                         <input type="file" name="thumbnail" class="form-control">
                     </div>
                     <button type="submit" class="btn btn-warning w-100 py-3 text-white fw-bold rounded-3">CREATE SUBJECT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Exam -->
+<div class="modal fade" id="createExamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Draft New Exam Paper</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_exam">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Exam Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="Midterm Assessment" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Subject</label>
+                            <select name="course" class="form-select" required>
+                                {% for subject in all_subjects %}
+                                <option value="{{ subject.id }}">{{ subject.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Duration (Mins)</label>
+                            <input type="number" name="duration" class="form-control" value="60" min="1" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Passing Score (%)</label>
+                        <input type="number" name="passing_score" class="form-control" value="50" min="0" max="100" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Instructions</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3">INITIALIZE PAPER</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Exam -->
+<div class="modal fade" id="editExamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Update Exam Details</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_exam">
+                    <input type="hidden" name="exam_id" id="edit_exam_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Exam Title</label>
+                        <input type="text" name="title" id="edit_exam_title" class="form-control" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Duration (Mins)</label>
+                            <input type="number" name="duration" id="edit_exam_duration" class="form-control" min="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Passing Score (%)</label>
+                            <input type="number" name="passing_score" id="edit_exam_score" class="form-control" min="0" max="100" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Instructions</label>
+                        <textarea name="description" id="edit_exam_desc" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3">UPDATE PAPER</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Assign Exam -->
+<div class="modal fade" id="assignExamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="modal-eg-icon bg-primary bg-opacity-10 text-primary mx-auto">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </div>
+                    <h5 class="fw-bold">Distribute Assessment</h5>
+                    <p class="text-muted small">Assigning <span id="assign_exam_name" class="fw-bold text-dark"></span> to selected candidates.</p>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="assign_exam">
+                    <input type="hidden" name="exam_id" id="assign_exam_id_input">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Select Candidates</label>
+                        <div class="rounded-3 border p-3 bg-light" style="max-height: 220px; overflow-y: auto;">
+                            {% for assignment in candidates %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="student_ids" value="{{ assignment.student.id }}" id="candidate_{{ assignment.student.id }}_modal">
+                                <label class="form-check-label small" for="candidate_{{ assignment.student.id }}_modal">
+                                    {{ assignment.student.get_full_name|default:assignment.student.username }} - {{ assignment.course.title }}
+                                </label>
+                            </div>
+                            {% empty %}
+                            <p class="text-center py-3 text-muted small">No candidates available in your portal.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3">ASSIGN NOW</button>
                 </form>
             </div>
         </div>
@@ -678,6 +994,18 @@
             const sectionId = location.hash.replace('#', '');
             switchSection(sectionId);
         }
+        const activeModalId = "{{ active_modal|default:''|escapejs }}";
+        if (activeModalId) {
+            if (activeModalId === 'registerCandidateModal') {
+                switchSection('candidates');
+            } else {
+                switchSection('teachers');
+            }
+            const activeModal = document.getElementById(activeModalId);
+            if (activeModal) {
+                new bootstrap.Modal(activeModal).show();
+            }
+        }
     }
 
     // Modal Helpers
@@ -694,6 +1022,21 @@
         document.getElementById('edit_subject_title').value = title;
         document.getElementById('edit_subject_desc').value = desc;
         new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
+    }
+
+    function openEditExamModal(id, title, duration, score, desc) {
+        document.getElementById('edit_exam_id').value = id;
+        document.getElementById('edit_exam_title').value = title;
+        document.getElementById('edit_exam_duration').value = duration;
+        document.getElementById('edit_exam_score').value = score;
+        document.getElementById('edit_exam_desc').value = desc;
+        new bootstrap.Modal(document.getElementById('editExamModal')).show();
+    }
+
+    function openAssignExamModal(id, title) {
+        document.getElementById('assign_exam_id_input').value = id;
+        document.getElementById('assign_exam_name').textContent = title;
+        new bootstrap.Modal(document.getElementById('assignExamModal')).show();
     }
 
     function openEditCandidateModal(id, fname, lname, email) {

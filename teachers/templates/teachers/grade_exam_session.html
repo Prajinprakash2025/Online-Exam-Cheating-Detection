@@ -45,7 +45,7 @@
     <div class="row g-4">
         <!-- Main Grading Area -->
         <div class="col-lg-8">
-            <form method="POST">
+            <form method="POST" id="gradeForm">
                 {% csrf_token %}
                 
                 <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-file-invoice me-2 text-teal"></i> Responses</h5>
@@ -107,20 +107,25 @@
                     {% endif %}
                 </div>
                 {% endfor %}
-
-                <div class="ans-card p-4 mt-5 bg-teal bg-opacity-10 border-teal">
-                    <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-comment-medical me-2"></i> Evaluator Feedback</h5>
-                    <textarea name="admin_notes" class="form-control rounded-4 p-3 border-2" rows="3" placeholder="Add any private notes or feedback for the student here...">{{ session.admin_notes }}</textarea>
-                    <button type="submit" class="btn btn-teal w-100 py-3 rounded-4 fw-bold mt-4 shadow-sm" style="background: var(--primary-teal); font-size: 1.1rem;">
-                        FINALIZE & SUBMIT GRADE
-                    </button>
-                </div>
             </form>
         </div>
 
         <!-- Sidebar Info -->
         <div class="col-lg-4">
             <div class="sticky-top" style="top: 100px;">
+                <div class="card border-0 shadow-lg rounded-4 p-4 mb-4">
+                    <h6 class="fw-bold text-muted text-uppercase ls-1 mb-3">Mark Evaluation</h6>
+                    <div class="d-flex justify-content-between align-items-center bg-light rounded-4 p-3 mb-3">
+                        <span class="small fw-bold text-muted">Current Score</span>
+                        <span class="fw-bold text-dark">{{ session.score|default:0|floatformat:0 }}%</span>
+                    </div>
+                    <label class="form-label small fw-bold text-teal">Evaluator Feedback</label>
+                    <textarea form="gradeForm" name="admin_notes" class="form-control rounded-4 p-3 border-2" rows="4" placeholder="Add notes or feedback for this submission...">{{ session.admin_notes }}</textarea>
+                    <button form="gradeForm" type="submit" class="btn btn-teal w-100 py-3 rounded-4 fw-bold mt-4 shadow-sm text-white" style="background: var(--primary-teal); font-size: 1.05rem;">
+                        {% if session.is_reviewed %}UPDATE GRADE{% else %}FINALIZE & SUBMIT GRADE{% endif %}
+                    </button>
+                </div>
+
                 <div class="card border-0 shadow-lg rounded-4 p-4 mb-4">
                     <h6 class="fw-bold text-muted text-uppercase ls-1 mb-4">Integrity Report</h6>
                     
@@ -156,6 +161,42 @@
                     {% else %}
                         <p class="small mb-0 text-white-50"><i class="fa-solid fa-robot me-2"></i> No significant patterns of suspicious behaviour detected.</p>
                     {% endif %}
+                </div>
+
+                <div class="card border-0 shadow-lg rounded-4 p-4 mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h6 class="fw-bold text-muted text-uppercase ls-1 mb-0">Evidence Images</h6>
+                        <span class="badge bg-danger rounded-pill">{{ logs.count }}</span>
+                    </div>
+                    <div class="row g-3">
+                        {% for log in logs %}
+                        <div class="col-12">
+                            <div class="border rounded-4 overflow-hidden bg-light">
+                                {% if log.evidence_image %}
+                                    <a href="{{ log.evidence_image.url }}" target="_blank" class="d-block">
+                                        <img src="{{ log.evidence_image.url }}" alt="Evidence snapshot" class="w-100" style="height: 190px; object-fit: cover;">
+                                    </a>
+                                {% else %}
+                                    <div class="d-flex flex-column align-items-center justify-content-center text-muted" style="height: 190px;">
+                                        <i class="fa-solid fa-image-slash fs-1 opacity-25 mb-2"></i>
+                                        <span class="small fw-bold">No Image Available</span>
+                                    </div>
+                                {% endif %}
+                                <div class="p-3 bg-white">
+                                    <div class="fw-bold text-danger small">{{ log.get_violation_type_display }}</div>
+                                    <div class="text-muted small">
+                                        {{ log.timestamp|time:"H:i:s" }}{% if log.confidence_score %} &bull; Confidence {{ log.confidence_score|floatformat:2 }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center py-4 bg-light rounded-4">
+                            <i class="fa-solid fa-shield-check text-success fs-1 mb-2"></i>
+                            <p class="small fw-bold text-success mb-0">No evidence images recorded.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

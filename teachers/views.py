@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from django.db.models import Count, Q
 from courses.models import Course, Video, Quiz, QuizSession, Exam, ExamQuestion, ExamAssignment, StudentAnswer
 from courses.forms import QuizForm
 from examiners.forms import SubjectForm
@@ -128,13 +129,19 @@ def teacher_dashboard(request):
                 student_ids = request.POST.getlist('student_ids')
                 
             exam = get_object_or_404(Exam, id=exam_id, created_by=teacher)
+            allowed_student_ids = set(str(student_id) for student_id in TeacherStudentAssignment.objects.filter(
+                teacher=teacher
+            ).values_list('student_id', flat=True))
             
             count = 0
             for sid in student_ids:
+                if sid not in allowed_student_ids:
+                    continue
                 from courses.models import User
-                student = get_object_or_404(User, id=sid)
-                ExamAssignment.objects.get_or_create(exam=exam, student=student)
-                count += 1
+                student = get_object_or_404(User, id=sid, is_student=True)
+                _assignment, created = ExamAssignment.objects.get_or_create(exam=exam, student=student)
+                if created:
+                    count += 1
             
             messages.success(request, f"Successfully assigned '{exam.title}' to {count} students.")
             return redirect('/teachers/dashboard/#students')
@@ -174,7 +181,44 @@ def teacher_dashboard(request):
     assigned_student_ids = [a.student_id for a in assignments]
     recent_sessions = QuizSession.objects.filter(
         student_id__in=assigned_student_ids
-    ).exclude(status='ongoing').select_related('student', 'video__course').order_by('-start_time')[:10]
+    ).exclude(status='ongoing').select_related('student', 'video__course', 'exam__course').order_by('-start_time')[:10]
+    review_count = QuizSession.objects.filter(
+        student_id__in=assigned_student_ids
+    ).exclude(status='ongoing').filter(is_reviewed=False).count()
+    flagged_count = QuizSession.objects.filter(
+        student_id__in=assigned_student_ids,
+        status='flagged',
+    ).count()
+
+    exam_assignments_by_student = {}
+    exam_assignments = ExamAssignment.objects.filter(
+        student_id__in=assigned_student_ids,
+        exam__created_by=teacher,
+    ).select_related('exam', 'exam__course').order_by('-assigned_at')
+    for exam_assignment in exam_assignments:
+        exam_assignments_by_student.setdefault(exam_assignment.student_id, []).append(exam_assignment)
+
+    session_summary_by_student = {}
+    session_summaries = QuizSession.objects.filter(
+        student_id__in=assigned_student_ids
+    ).exclude(status='ongoing').values('student_id').annotate(
+        completed_count=Count('id'),
+        review_count=Count('id', filter=Q(is_reviewed=False)),
+        flagged_count=Count('id', filter=Q(status='flagged')),
+    )
+    for summary in session_summaries:
+        session_summary_by_student[summary['student_id']] = summary
+
+    for assignment in assignments:
+        student_exam_assignments = exam_assignments_by_student.get(assignment.student_id, [])
+        summary = session_summary_by_student.get(assignment.student_id, {})
+        assignment.assigned_exams = student_exam_assignments
+        assignment.assigned_exam_count = len(student_exam_assignments)
+        assignment.submitted_exam_count = sum(1 for item in student_exam_assignments if item.status == 'submitted')
+        assignment.completed_exam_count = sum(1 for item in student_exam_assignments if item.status == 'completed')
+        assignment.completed_session_count = summary.get('completed_count', 0)
+        assignment.review_session_count = summary.get('review_count', 0)
+        assignment.flagged_session_count = summary.get('flagged_count', 0)
 
     # Exams for the dashboard
     exams = Exam.objects.filter(created_by=teacher).prefetch_related('questions', 'assignments')
@@ -185,6 +229,8 @@ def teacher_dashboard(request):
         'all_subjects': all_subjects,
         'videos': videos,
         'recent_sessions': recent_sessions,
+        'review_count': review_count,
+        'flagged_count': flagged_count,
         'subject_form': subject_form,
         'exams': exams
     })
@@ -447,8 +493,12 @@ def grade_exam_session(request, session_id):
         for key, value in request.POST.items():
             if key.startswith('marks_'):
                 answer_id = key.split('_')[1]
-                marks = float(value or 0)
+                try:
+                    marks = float(value or 0)
+                except (TypeError, ValueError):
+                    marks = 0
                 ans = StudentAnswer.objects.get(id=answer_id, session=session)
+                marks = max(0, min(marks, ans.question.points))
                 ans.marks_earned = marks
                 ans.is_correct = marks > (ans.question.points / 2) # Arbitrary threshold
                 ans.save()
@@ -468,6 +518,7 @@ def grade_exam_session(request, session_id):
         assignment = ExamAssignment.objects.filter(exam=session.exam, student=session.student).first()
         if assignment:
             assignment.final_score = percentage
+            assignment.status = 'completed'
             assignment.save()
             
         messages.success(request, f"Grading completed for {session.student.username}. Final Score: {int(percentage)}%")

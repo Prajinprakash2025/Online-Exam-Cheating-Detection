@@ -56,8 +56,110 @@
         background: linear-gradient(135deg, #8e44ad 0%, #3498db 100%);
         box-shadow: 0 20px 40px rgba(142, 68, 173, 0.2);
     }
+
+    .role-home {
+        background: #f8fafc;
+        min-height: calc(100vh - 90px);
+    }
+
+    .role-hero {
+        background: white;
+        border: 1px solid #edf2f7;
+        border-radius: 24px;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .role-stat {
+        background: #f8fafc;
+        border: 1px solid #edf2f7;
+        border-radius: 16px;
+        padding: 1rem;
+    }
+
+    .instruction-card {
+        background: white;
+        border: 1px solid #edf2f7;
+        border-radius: 18px;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+        height: 100%;
+    }
 </style>
 
+{% if user.is_authenticated %}
+<div class="role-home py-5">
+    <div class="container py-4">
+        <div class="role-hero p-4 p-lg-5 mb-4">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    {% if user.is_examiner %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 mb-3">Conductor Workspace</span>
+                        <h1 class="fw-bold display-5 text-dark mb-3">Welcome, {{ user.first_name|default:user.username }}</h1>
+                        <p class="lead text-muted mb-4">Manage teachers, candidates, subjects, exam papers, and final oversight from one place.</p>
+                    {% elif user.is_teacher %}
+                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 mb-3">Teacher Workspace</span>
+                        <h1 class="fw-bold display-5 text-dark mb-3">Welcome, {{ user.first_name|default:user.username }}</h1>
+                        <p class="lead text-muted mb-4">Review submissions, inspect proctoring evidence, grade answers, and publish marks for your students.</p>
+                    {% else %}
+                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2 mb-3">Student Exam Hall</span>
+                        <h1 class="fw-bold display-5 text-dark mb-3">Welcome, {{ user.first_name|default:user.username }}</h1>
+                        <p class="lead text-muted mb-4">Check assigned exams, wait for published results, and enter your proctored assessment only when ready.</p>
+                    {% endif %}
+                </div>
+                <div class="col-lg-4">
+                    <div class="d-grid gap-3">
+                        {% if user.is_examiner %}
+                            <a href="{% url 'examiner_dashboard' %}" class="btn btn-primary btn-lg rounded-pill fw-bold">Open Conductor Dashboard</a>
+                            <a href="{% url 'examiner_dashboard' %}#candidates" class="btn btn-outline-primary rounded-pill fw-bold">Manage Candidates</a>
+                        {% elif user.is_teacher %}
+                            <a href="{% url 'teacher_dashboard' %}" class="btn btn-success btn-lg rounded-pill fw-bold">Open Teacher Dashboard</a>
+                            <a href="{% url 'teacher_proctoring_dashboard' %}" class="btn btn-outline-success rounded-pill fw-bold">Review Submissions</a>
+                        {% else %}
+                            <a href="{% url 'profile' %}" class="btn btn-warning btn-lg rounded-pill fw-bold text-white">Open Student Profile</a>
+                            <a href="{% url 'profile' %}" class="btn btn-outline-warning rounded-pill fw-bold">View Assigned Exams</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if user.is_examiner %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-4"><div class="role-stat"><div class="text-muted small fw-bold">Teachers</div><div class="fs-3 fw-bold">{{ managed_teachers_count }}</div></div></div>
+            <div class="col-md-4"><div class="role-stat"><div class="text-muted small fw-bold">Candidates</div><div class="fs-3 fw-bold">{{ managed_candidates_count }}</div></div></div>
+            <div class="col-md-4"><div class="role-stat"><div class="text-muted small fw-bold">Exam Papers</div><div class="fs-3 fw-bold">{{ managed_exam_count }}</div></div></div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-users-gear text-primary fs-3 mb-3"></i><h5 class="fw-bold">Authorize Staff</h5><p class="text-muted mb-0">Create teacher accounts and keep candidate ownership under the right conductor chain.</p></div></div>
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-file-signature text-primary fs-3 mb-3"></i><h5 class="fw-bold">Build Exams</h5><p class="text-muted mb-0">Create subjects, draft assessment papers, and assign them to managed candidates.</p></div></div>
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-eye text-primary fs-3 mb-3"></i><h5 class="fw-bold">Audit Results</h5><p class="text-muted mb-0">Use reports and monitoring views to supervise exam integrity and performance.</p></div></div>
+        </div>
+        {% elif user.is_teacher %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-3"><div class="role-stat"><div class="text-muted small fw-bold">Students</div><div class="fs-3 fw-bold">{{ teacher_students_count }}</div></div></div>
+            <div class="col-md-3"><div class="role-stat"><div class="text-muted small fw-bold">Subjects</div><div class="fs-3 fw-bold">{{ teacher_subjects_count }}</div></div></div>
+            <div class="col-md-3"><div class="role-stat"><div class="text-muted small fw-bold">Exams</div><div class="fs-3 fw-bold">{{ teacher_exam_count }}</div></div></div>
+            <div class="col-md-3"><div class="role-stat"><div class="text-muted small fw-bold">Need Review</div><div class="fs-3 fw-bold">{{ teacher_review_count }}</div></div></div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-user-graduate text-success fs-3 mb-3"></i><h5 class="fw-bold">Register Students</h5><p class="text-muted mb-0">Add students to your roster and connect them with the correct subject.</p></div></div>
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-list-check text-success fs-3 mb-3"></i><h5 class="fw-bold">Evaluate Work</h5><p class="text-muted mb-0">Review answers, inspect proctoring images, add feedback, and publish marks.</p></div></div>
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-shield-halved text-success fs-3 mb-3"></i><h5 class="fw-bold">Watch Integrity</h5><p class="text-muted mb-0">Use live monitoring and evidence logs before approving or invalidating sessions.</p></div></div>
+        </div>
+        {% else %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-4"><div class="role-stat"><div class="text-muted small fw-bold">Assigned Exams</div><div class="fs-3 fw-bold">{{ student_assigned_count }}</div></div></div>
+            <div class="col-md-4"><div class="role-stat"><div class="text-muted small fw-bold">Under Review</div><div class="fs-3 fw-bold">{{ student_pending_count }}</div></div></div>
+            <div class="col-md-4"><div class="role-stat"><div class="text-muted small fw-bold">Published Results</div><div class="fs-3 fw-bold">{{ student_published_count }}</div></div></div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-camera text-warning fs-3 mb-3"></i><h5 class="fw-bold">Before Exam</h5><p class="text-muted mb-0">Keep your webcam ready, sit alone, and avoid switching tabs during the session.</p></div></div>
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-hourglass-half text-warning fs-3 mb-3"></i><h5 class="fw-bold">After Submit</h5><p class="text-muted mb-0">Your score stays hidden until a teacher reviews and publishes the result.</p></div></div>
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-square-poll-vertical text-warning fs-3 mb-3"></i><h5 class="fw-bold">Results</h5><p class="text-muted mb-0">Published marks appear in your profile under Mandatory Assessment Papers.</p></div></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
 
 <div class="hero-section py-5 mb-5">
     <div class="container py-5 text-center position-relative" style="z-index: 2;">
@@ -262,5 +364,6 @@
     </div>
 </div>
 
+{% endif %}
 
 {% endblock %}

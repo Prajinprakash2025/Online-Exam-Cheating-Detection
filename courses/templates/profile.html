@@ -65,9 +65,53 @@
         border-radius: 10px;
         background-color: #edf2f7;
     }
+
+    .profile-shell {
+        max-width: 1200px;
+    }
+
+    .summary-pill {
+        min-width: 148px;
+        justify-content: center;
+    }
+
+    .assessment-card {
+        border: 1px solid #eef2f7;
+        border-radius: 18px;
+        background: white;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+    }
+
+    .assessment-top {
+        background: linear-gradient(135deg, #f0f9ff, #f7f2fb);
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .status-panel {
+        border-radius: 16px;
+        padding: 1rem;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .status-assigned {
+        background: #eef6ff;
+        color: #0d6efd;
+    }
+
+    .status-submitted {
+        background: #fff8e6;
+        color: #b7791f;
+    }
+
+    .status-published {
+        background: #eafaf2;
+        color: #0f8a5f;
+    }
 </style>
 
-<div class="container py-5">
+<div class="container profile-shell py-5">
     
     <div class="row mb-5 align-items-end">
         <div class="col-md-8">
@@ -76,10 +120,10 @@
             <p class="text-muted mb-0">Here is your professional Exam Portal dashboard.</p>
         </div>
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
-             <div class="d-inline-flex align-items-center bg-white rounded-pill shadow-sm px-4 py-2">
+             <div class="summary-pill d-inline-flex align-items-center bg-white rounded-pill shadow-sm px-4 py-2">
                 <i class="fa-solid fa-file-contract text-primary me-2"></i>
-                <span class="fw-bold text-dark">{{ enrolled_courses.count }}</span>
-                <span class="text-muted ms-1">Active Exams</span>
+                <span class="fw-bold text-dark">{{ exam_assignments.count }}</span>
+                <span class="text-muted ms-1">Assigned Papers</span>
              </div>
         </div>
     </div>
@@ -215,10 +259,21 @@
                 <div class="row g-3">
                     {% for assignment in exam_assignments %}
                         <div class="col-md-6">
-                            <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden">
-                                <div class="bg-info bg-opacity-10 p-4 border-bottom border-light">
-                                    <h6 class="text-info fw-bold small text-uppercase mb-2"><i class="fa-solid fa-file-contract me-1"></i> Examination Paper</h6>
-                                    <h5 class="fw-bold text-dark mb-0">{{ assignment.exam.title }}</h5>
+                            <div class="assessment-card h-100">
+                                <div class="assessment-top p-4">
+                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <h6 class="text-info fw-bold small text-uppercase mb-2"><i class="fa-solid fa-file-contract me-1"></i> Examination Paper</h6>
+                                            <h5 class="fw-bold text-dark mb-0">{{ assignment.exam.title }}</h5>
+                                        </div>
+                                        {% if assignment.status == 'completed' %}
+                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">Published</span>
+                                        {% elif assignment.status == 'submitted' %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2">Under Review</span>
+                                        {% else %}
+                                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2">Assigned</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                                 <div class="card-body p-4 d-flex flex-column">
                                     <div class="mb-4">
@@ -237,8 +292,14 @@
                                     </div>
                                     <div class="mt-auto">
                                         {% if assignment.status == 'completed' %}
-                                            <div class="bg-success bg-opacity-10 text-success p-3 rounded-4 text-center">
-                                                <i class="fa-solid fa-check-circle me-1"></i> Score: <strong>{{ assignment.final_score|floatformat:1 }}%</strong>
+                                            <div class="status-panel status-published">
+                                                <div class="small text-uppercase mb-1">Published Result</div>
+                                                <div class="fs-4"><i class="fa-solid fa-check-circle me-1"></i>{{ assignment.final_score|floatformat:1 }}%</div>
+                                            </div>
+                                        {% elif assignment.status == 'submitted' %}
+                                            <div class="status-panel status-submitted">
+                                                <div><i class="fa-solid fa-hourglass-half me-1"></i> Submitted for Evaluation</div>
+                                                <div class="small fw-semibold mt-1">Your mark will appear here after the teacher publishes it.</div>
                                             </div>
                                         {% else %}
                                             <a href="{% url 'start_exam' assignment.exam.id %}" class="btn btn-info text-white w-100 py-3 rounded-pill fw-bold shadow-sm">

@@ -142,12 +142,17 @@ LOGIN_REDIRECT_URL = 'home'
 # 3. Where to send a user AFTER they log out
 LOGOUT_REDIRECT_URL = 'home'
 
-# settings.py
+# Email configuration
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend'
+)
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes', 'on')
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('1', 'true', 'yes', 'on')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER
 
-# # EMAIL CONFIGURATION
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'nandhanaa06@gmail.com'  # <--- PUT YOUR EMAIL HERE
-# EMAIL_HOST_PASSWORD = 'ckkb mgbi zlzd gpjd'  # <--- PUT YOUR APP PASSWORD HERE
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

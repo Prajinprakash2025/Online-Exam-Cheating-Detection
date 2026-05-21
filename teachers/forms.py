@@ -21,6 +21,12 @@ class TeacherCreateForm(forms.ModelForm):
                 'placeholder': self.fields[field].label
             })
 
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("A user already exists with this email.")
+        return email
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password'])
@@ -28,10 +34,20 @@ class TeacherCreateForm(forms.ModelForm):
         user.is_student = False
         user.is_staff = False
         # Use email prefix as username
-        user.username = self.cleaned_data['email'].split('@')[0]
+        user.username = self._unique_username(self.cleaned_data['email'])
         if commit:
             user.save()
         return user
+
+    def _unique_username(self, email):
+        base = (email.split('@')[0] or 'teacher')[:140]
+        username = base
+        counter = 1
+        while User.objects.filter(username__iexact=username).exists():
+            suffix = f"-{counter}"
+            username = f"{base[:150 - len(suffix)]}{suffix}"
+            counter += 1
+        return username
 
 
 class TeacherStudentAssignmentForm(forms.ModelForm):

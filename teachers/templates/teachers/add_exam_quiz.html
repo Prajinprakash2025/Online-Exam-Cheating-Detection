@@ -137,7 +137,7 @@
                     <button type="submit" class="btn btn-teal w-100 py-3 shadow-sm mt-2">
                         ADD TO EXAM PAPER
                     </button>
-                    <a href="{% url 'teacher_dashboard' %}#exams" class="btn btn-light w-100 py-3 mt-3 rounded-4 fw-bold">BACK TO DASHBOARD</a>
+                    <a href="{% if back_dashboard_url %}{{ back_dashboard_url }}{% else %}{% url 'teacher_dashboard' %}#exams{% endif %}" class="btn btn-light w-100 py-3 mt-3 rounded-4 fw-bold">BACK TO DASHBOARD</a>
                 </form>
             </div>
         </div>
@@ -162,7 +162,11 @@
                         {% endif %}
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1 rounded-pill small fw-bold" style="font-size: 0.65rem;">{{ q.points }} PTS</span>
                     </div>
+                    {% if delete_question_url_name %}
+                    <a href="{% url delete_question_url_name q.id %}" class="btn btn-link text-danger p-0" title="Remove" onclick="return confirm('Remove this question?')"><i class="fa-solid fa-trash-can"></i></a>
+                    {% else %}
                     <a href="{% url 'delete_exam_question' q.id %}" class="btn btn-link text-danger p-0" title="Remove" onclick="return confirm('Remove this question?')"><i class="fa-solid fa-trash-can"></i></a>
+                    {% endif %}
                 </div>
                 <h6 class="fw-bold text-dark mb-4" style="line-height: 1.6;">{{ q.question }}</h6>
                 
@@ -215,16 +219,19 @@
         const optionsContainer = document.getElementById('options_container');
         const singleTray = document.getElementById('single_correct_tray');
         const multiTray = document.getElementById('multi_correct_tray');
-        const inputs = optionsContainer.querySelectorAll('input');
+        const optionInputs = optionsContainer.querySelectorAll('input[name^="option_"]');
+        const multiAnswerInputs = optionsContainer.querySelectorAll('input[name="correct_options"]');
 
         if (type === 'essay') {
             optionsContainer.style.opacity = '0';
             setTimeout(() => { optionsContainer.style.display = 'none'; }, 300);
-            inputs.forEach(i => i.required = false);
+            optionInputs.forEach(i => i.required = false);
+            multiAnswerInputs.forEach(i => i.required = false);
         } else {
             optionsContainer.style.display = 'block';
             setTimeout(() => { optionsContainer.style.opacity = '1'; }, 10);
-            inputs.forEach(i => i.required = true);
+            optionInputs.forEach(i => i.required = true);
+            multiAnswerInputs.forEach(i => i.required = false);
 
             if (type === 'mcq') {
                 singleTray.style.display = 'block';
@@ -255,5 +262,7 @@
         }
         return true;
     }
+
+    document.addEventListener('DOMContentLoaded', updateQuestionUI);
 </script>
 {% endblock %}

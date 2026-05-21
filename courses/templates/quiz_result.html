@@ -77,13 +77,13 @@
                         </div>
                         
                         <div class="card-body p-5 bg-white">
-                            <p class="text-muted text-uppercase fw-bold ls-1 mb-2">Automated Score</p>
-                            <h1 class="score-display text-dark mb-4">{{ score }}%</h1>
+                            <p class="text-muted text-uppercase fw-bold ls-1 mb-2">Submission Received</p>
+                            <h1 class="fw-bold text-dark mb-4">Awaiting Evaluation</h1>
                             <p class="text-muted mb-4">
                                 {% if has_essay %}
-                                    Your exam contains <strong>descriptive essay questions</strong>. Your final grade will be calculated once an instructor manually reviews your responses.
+                                    Your exam has been submitted. Your final grade will be published after a teacher reviews your responses and proctoring evidence.
                                 {% else %}
-                                    Your response has been recorded. An instructor will review the proctoring session before finalizing your certification.
+                                    Your response has been recorded. A teacher will review the proctoring session before publishing your result.
                                 {% endif %}
                             </p>
                             <div class="d-grid gap-3">

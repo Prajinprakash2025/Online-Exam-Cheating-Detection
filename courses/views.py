@@ -31,9 +31,42 @@ def is_admin(user):
 def home(request):
     # Fetch Examiners and Teachers for the landing page directory
     conductors = User.objects.filter(Q(is_examiner=True) | Q(is_teacher=True)).exclude(is_superuser=True).order_by('?')[:8]
-    return render(request, 'home.html', {
-        'conductors': conductors
-    })
+    context = {'conductors': conductors}
+
+    if request.user.is_authenticated:
+        from teachers.models import TeacherStudentAssignment
+        from examiners.models import ExaminerTeacherAssignment
+        from .models import Exam, ExamAssignment
+
+        if request.user.is_examiner:
+            teacher_ids = ExaminerTeacherAssignment.objects.filter(
+                examiner=request.user
+            ).values_list('teacher_id', flat=True)
+            context.update({
+                'managed_teachers_count': len(set(teacher_ids)),
+                'managed_candidates_count': TeacherStudentAssignment.objects.filter(
+                    teacher_id__in=teacher_ids
+                ).values_list('student_id', flat=True).distinct().count(),
+                'managed_exam_count': Exam.objects.filter(created_by=request.user).count(),
+            })
+        elif request.user.is_teacher:
+            assignments = TeacherStudentAssignment.objects.filter(teacher=request.user)
+            context.update({
+                'teacher_students_count': assignments.values_list('student_id', flat=True).distinct().count(),
+                'teacher_subjects_count': assignments.values_list('course_id', flat=True).distinct().count(),
+                'teacher_exam_count': Exam.objects.filter(created_by=request.user).count(),
+                'teacher_review_count': QuizSession.objects.filter(
+                    student_id__in=assignments.values_list('student_id', flat=True)
+                ).exclude(status='ongoing').filter(is_reviewed=False).count(),
+            })
+        else:
+            context.update({
+                'student_assigned_count': ExamAssignment.objects.filter(student=request.user).count(),
+                'student_pending_count': ExamAssignment.objects.filter(student=request.user, status='submitted').count(),
+                'student_published_count': ExamAssignment.objects.filter(student=request.user, status='completed').count(),
+            })
+
+    return render(request, 'home.html', context)
 
 def course_list(request):
     query = request.GET.get('q')
@@ -124,7 +157,7 @@ def forgot_password_view(request):
             
             subject = 'Your Password Reset OTP'
             message = f'Hello {user.first_name},\n\nYour OTP to reset your password is: {otp}\n\nValid for 10 minutes.'
-            from_email = settings.EMAIL_HOST_USER
+            from_email = settings.DEFAULT_FROM_EMAIL
             recipient_list = [email]
             
             send_mail(subject, message, from_email, recipient_list, fail_silently=False)
@@ -267,7 +300,12 @@ def take_quiz(request, video_id):
         if request.method == 'POST':
             for q in questions:
                 user_answer = request.POST.get(f'question_{q.id}')
-                if user_answer and int(user_answer) == q.correct_option:
+                try:
+                    submitted_option = int(user_answer)
+                except (TypeError, ValueError):
+                    submitted_option = None
+
+                if submitted_option == q.correct_option:
                     score += 1
         
         percentage = (score / total_questions) * 100 if total_questions > 0 else 0
@@ -306,7 +344,11 @@ def start_exam(request, exam_id):
     assignment = get_object_or_404(ExamAssignment, student=request.user, exam=exam)
     
     if assignment.status == 'completed':
-        messages.info(request, "You have already completed this assessment.")
+        messages.info(request, "This assessment has already been graded and published.")
+        return redirect('profile')
+
+    if assignment.status == 'submitted':
+        messages.info(request, "Your assessment is submitted and waiting for evaluation.")
         return redirect('profile')
 
     questions = exam.questions.all()
@@ -379,20 +421,20 @@ def start_exam(request, exam_id):
         # Mark Session as submitted
         session.score = percentage
         session.status = 'submitted'
-        # If no essays, it's immediately reviewed. If essays, teacher must review.
-        session.is_reviewed = not has_essay 
+        # Exam scores are published only after a teacher/conductor review.
+        session.is_reviewed = False
         session.save()
 
-        # Update assignment status
-        assignment.status = 'completed'
-        assignment.final_score = percentage
+        # Keep the result hidden from the student until grading is published.
+        assignment.status = 'submitted'
+        assignment.final_score = None
         assignment.save()
 
         return render(request, 'quiz_result.html', {
-            'status': 'passed' if percentage >= exam.passing_score else ('pending' if has_essay else 'failed'), 
+            'status': 'pending', 
             'exam': exam, 
-            'score': int(percentage),
-            'has_essay': has_essay
+            'score': None,
+            'has_essay': True
         })
 
     # 4. RENDER PROCTORED PAGE (Generic support in take_quiz.html)
@@ -412,6 +454,7 @@ import cv2
 import numpy as np
 from django.http import JsonResponse
 from django.core.files.base import ContentFile
+from django.core.cache import cache
 from .models import QuizSession, ProctoringLog
 
 # 🚀 Load OpenCV AI Models globally to make it super fast
@@ -452,6 +495,8 @@ def _detect_faces(gray_frame):
                 filtered.append((x, y, w, h))
         if filtered:
             return filtered
+        if len(faces) > 0:
+            return list(faces)
     return []
 
 
@@ -498,11 +543,78 @@ def _detect_phone(frame, face_boxes):
                         return True, (x, y, w, h)
     return False, None
 
+
+def _log_proctoring_violation(session, violation_type, confidence, frame=None, label=None):
+    if session.proctoring_logs.count() >= 25:
+        return False
+
+    evidence_file = None
+    if frame is not None:
+        if label:
+            cv2.putText(frame, label, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+        ok, buffer = cv2.imencode('.jpg', frame)
+        if ok:
+            evidence_file = ContentFile(
+                buffer.tobytes(),
+                name=f"evidence_{session.id}_{int(np.random.rand() * 100000)}.jpg",
+            )
+
+    ProctoringLog.objects.create(
+        session=session,
+        violation_type=violation_type,
+        confidence_score=confidence,
+        evidence_image=evidence_file,
+    )
+
+    if session.status != 'flagged':
+        session.status = 'flagged'
+        session.save(update_fields=['status'])
+
+    return True
+
+
+def _should_log_frame_violation(session_id, violation_type):
+    immediate_types = {'multi_face', 'phone_detected'}
+    if violation_type in immediate_types:
+        cache.delete(f'proctor_clean_{session_id}')
+        return True
+
+    key = f'proctor_violation_{session_id}_{violation_type}'
+    count = cache.get(key, 0) + 1
+    cache.set(key, count, timeout=30)
+    return count >= 2
+
+
+def _reset_frame_violation_state(session_id):
+    for violation_type in ('no_face', 'gaze_deviation', 'head_pose'):
+        cache.delete(f'proctor_violation_{session_id}_{violation_type}')
+
 def process_quiz_frame(request, session_id):
     if request.method == 'POST':
         try:
             session = QuizSession.objects.get(id=session_id, student=request.user)
             data = json.loads(request.body)
+            event_type = data.get('event')
+
+            if event_type:
+                allowed_events = {
+                    'tab_switch': ('tab_switch', 0.98, 'Browser tab/window changed'),
+                    'window_blur': ('tab_switch', 0.92, 'Browser window lost focus'),
+                    'camera_stalled': ('no_face', 0.9, 'Camera feed stalled or unavailable'),
+                }
+                if event_type not in allowed_events:
+                    return JsonResponse({'status': 'ignored', 'violation': False})
+
+                violation_type, confidence, message = allowed_events[event_type]
+                logged = _log_proctoring_violation(session, violation_type, confidence)
+                return JsonResponse({
+                    'status': 'success',
+                    'violation': logged,
+                    'type': violation_type,
+                    'confidence': confidence,
+                    'message': message,
+                })
+
             image_data = data.get('image')
 
             if image_data:
@@ -514,6 +626,10 @@ def process_quiz_frame(request, session_id):
                 # Convert to OpenCV format
                 np_arr = np.frombuffer(img_bytes, np.uint8)
                 frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                if frame is None:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid frame'}, status=400)
+
+                frame = cv2.resize(frame, (640, 480))
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 gray = cv2.equalizeHist(gray)
 
@@ -588,43 +704,31 @@ def process_quiz_frame(request, session_id):
 
                 # Save the evidence if a rule was broken
                 if violation_detected:
-                    
-                    # Prevent database overload: Max 15 pictures per session
-                    if session.proctoring_logs.count() < 15:
-                        
-                        # Re-encode the image with the text and boxes drawn on it!
-                        _, buffer = cv2.imencode('.jpg', frame)
-                        evidence_bytes = buffer.tobytes()
-
-                        file_name = f"evidence_{session.id}_{int(np.random.rand()*1000)}.jpg"
-                        evidence_file = ContentFile(evidence_bytes, name=file_name)
-
-                        ProctoringLog.objects.create(
-                            session=session,
-                            violation_type=violation_type,
-                            confidence_score=confidence, 
-                            evidence_image=evidence_file
-                        )
-                        
-                        if session.status != 'flagged':
-                            session.status = 'flagged'
-                            session.save()
-                        
-                        readable = {
-                            'no_face': 'No face detected',
-                            'multi_face': 'Multiple persons detected',
-                            'gaze_deviation': 'Looking away from screen',
-                            'head_pose': 'Face hidden / angled',
-                            'phone_detected': 'Phone detected in frame',
-                        }
+                    readable = {
+                        'no_face': 'No face detected in repeated checks',
+                        'multi_face': 'Multiple persons detected',
+                        'gaze_deviation': 'Looking away from screen repeatedly',
+                        'head_pose': 'Face hidden or angled repeatedly',
+                        'phone_detected': 'Phone detected in frame',
+                    }
+                    if _should_log_frame_violation(session.id, violation_type):
+                        logged = _log_proctoring_violation(session, violation_type, confidence, frame=frame)
                         return JsonResponse({
                             'status': 'success',
-                            'violation': True,
+                            'violation': logged,
                             'type': violation_type,
                             'confidence': round(confidence, 2),
                             'message': readable.get(violation_type, 'Suspicious behaviour')
                         })
 
+                    return JsonResponse({
+                        'status': 'success',
+                        'violation': False,
+                        'type': violation_type,
+                        'message': 'Suspicious frame observed; waiting for confirmation.'
+                    })
+
+                _reset_frame_violation_state(session.id)
                 return JsonResponse({'status': 'success', 'violation': False})
 
         except Exception as e:

@@ -212,6 +212,7 @@ class ExamAssignment(models.Model):
     
     status = models.CharField(max_length=20, choices=(
         ('assigned', 'Assigned'),
+        ('submitted', 'Submitted'),
         ('completed', 'Completed'),
     ), default='assigned')
     

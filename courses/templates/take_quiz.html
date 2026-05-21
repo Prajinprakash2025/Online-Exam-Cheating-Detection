@@ -35,16 +35,16 @@
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <span class="badge bg-light text-dark border px-3 py-1 rounded-pill q-type-label text-uppercase">
-                                    {{ q.get_q_type_display }}
+                                    {% if q.q_type %}{{ q.get_q_type_display }}{% else %}Single Choice{% endif %}
                                 </span>
-                                <span class="text-muted small fw-bold">{{ q.points }} Points</span>
+                                <span class="text-muted small fw-bold">{{ q.points|default:"1" }} Points</span>
                             </div>
 
                             <h5 class="fw-bold mb-4" style="color: var(--primary-dark); line-height: 1.5;">
                                 <span class="text-muted me-2">{{ forloop.counter }}.</span> {{ q.question }}
                             </h5>
                             
-                            {% if q.q_type == 'mcq' %}
+                            {% if not q.q_type or q.q_type == 'mcq' %}
                                 <div class="form-check mb-3 ms-2">
                                     <input class="form-check-input" type="radio" name="question_{{ q.id }}" id="q{{q.id}}opt1" value="1" required>
                                     <label class="form-check-label text-secondary fw-semibold" for="q{{q.id}}opt1">{{ q.option_1 }}</label>
@@ -152,14 +152,20 @@
     // 2. WEBCAM ACCESS LOGIC
     // ==========================================
     const videoElement = document.getElementById('webcam');
+    let proctoringTimer = null;
+    let lastFrameSentAt = 0;
 
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(function(stream) {
             videoElement.srcObject = stream;
+            videoElement.onloadedmetadata = function() {
+                captureAndSendFrame();
+            };
         })
         .catch(function(err) {
             alert("Webcam access is required for this Proctored Exam! Please allow camera permissions.");
             console.error("Camera error:", err);
+            reportProctoringEvent('camera_stalled');
         });
 
     // ==========================================
@@ -167,7 +173,7 @@
     // ==========================================
     const canvasElement = document.getElementById('captureCanvas');
     const context = canvasElement.getContext('2d');
-    const captureInterval = 5000; // Snap a picture every 5 seconds
+    const captureInterval = 2500; // Frequent checks make short cheating attempts harder to miss.
 
     function getCookie(name) {
         let cookieValue = null;
@@ -184,36 +190,69 @@
         return cookieValue;
     }
 
-    function captureAndSendFrame() {
-        if (!videoElement.videoWidth) return; 
-
-        canvasElement.width = videoElement.videoWidth;
-        canvasElement.height = videoElement.videoHeight;
-        
-        context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-        const imageData = canvasElement.toDataURL('image/jpeg', 0.8);
-
-        // Send to the new Quiz Session endpoint
-        fetch(`/quiz/session/{{ session.id }}/process_frame/`, {
+    function postProctoringPayload(payload) {
+        return fetch(`/quiz/session/{{ session.id }}/process_frame/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ image: imageData })
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {
             if (data.violation) {
                 console.warn("AI Alert:", data.message);
             }
+            return data;
         })
-        .catch(error => console.error("Error sending frame:", error));
+        .catch(error => console.error("Error sending proctoring data:", error));
+    }
+
+    function reportProctoringEvent(eventName) {
+        postProctoringPayload({ event: eventName });
+    }
+
+    function captureAndSendFrame() {
+        if (!videoElement.videoWidth) {
+            reportProctoringEvent('camera_stalled');
+            return;
+        }
+
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+        
+        context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+        const imageData = canvasElement.toDataURL('image/jpeg', 0.8);
+        lastFrameSentAt = Date.now();
+
+        // Send to the new Quiz Session endpoint
+        postProctoringPayload({ image: imageData });
     }
 
     videoElement.addEventListener('play', () => {
-        setInterval(captureAndSendFrame, captureInterval);
+        if (!proctoringTimer) {
+            proctoringTimer = setInterval(captureAndSendFrame, captureInterval);
+        }
     });
+
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            reportProctoringEvent('tab_switch');
+        } else {
+            captureAndSendFrame();
+        }
+    });
+
+    window.addEventListener('blur', function() {
+        reportProctoringEvent('window_blur');
+    });
+
+    setInterval(function() {
+        if (Date.now() - lastFrameSentAt > 10000) {
+            reportProctoringEvent('camera_stalled');
+        }
+    }, 10000);
 </script>
 
 {% endblock %}

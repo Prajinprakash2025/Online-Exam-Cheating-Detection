@@ -140,6 +140,11 @@
         transform: translateY(-2px);
     }
 
+    input[readonly] {
+        color: #64748b;
+        cursor: default;
+    }
+
     .form-label {
         font-weight: 700;
         color: var(--eg-dark);
@@ -240,26 +245,50 @@
         <div class="auth-form-side">
             <div class="form-header">
                 <h2>Create Conductor Account</h2>
-                <p>Access the master panel to manage subjects and teachers.</p>
+                <p>{% if otp_sent %}Enter the OTP from your terminal to verify this email.{% else %}Access the master panel with email OTP verification.{% endif %}</p>
             </div>
 
             <form method="post">
                 {% csrf_token %}
-                <div class="form-grid">
-                    {% for field in form %}
-                    <div class="{% if field.name == 'email' %}col-full{% endif %}">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}
-                        <div class="error-msg"><i class="fa-solid fa-circle-exclamation me-1"></i> {{ field.errors|striptags }}</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
+                {% if otp_sent %}
+                    <input type="hidden" name="action" value="verify_signup_otp">
 
-                <button type="submit" class="btn btn-submit w-100">
-                    GET STARTED NOW <i class="fa-solid fa-arrow-right ms-2"></i>
-                </button>
+                    <div class="mb-4">
+                        <label class="form-label">Verification Email</label>
+                        <input type="email" value="{{ otp_email }}" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Enter 6-Digit OTP</label>
+                        <input type="text" name="otp" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required autofocus>
+                    </div>
+
+                    <div class="d-flex justify-content-end mb-3">
+                        <a href="{% url 'examiner_signup' %}?reset=1" class="text-muted small fw-bold text-decoration-none">Use different email</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-submit w-100">
+                        VERIFY EMAIL & CREATE ACCOUNT <i class="fa-solid fa-user-check ms-2"></i>
+                    </button>
+                {% else %}
+                    <input type="hidden" name="action" value="send_signup_otp">
+
+                    <div class="form-grid">
+                        {% for field in form %}
+                        <div class="{% if field.name == 'email' %}col-full{% endif %}">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="error-msg"><i class="fa-solid fa-circle-exclamation me-1"></i> {{ field.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="submit" class="btn btn-submit w-100">
+                        SEND EMAIL OTP <i class="fa-solid fa-paper-plane ms-2"></i>
+                    </button>
+                {% endif %}
 
                 <div class="link-footer">
                     Already a conductor? <a href="{% url 'examiner_login' %}">Sign In</a>
@@ -270,4 +299,3 @@
     </div>
 </div>
 {% endblock %}
-

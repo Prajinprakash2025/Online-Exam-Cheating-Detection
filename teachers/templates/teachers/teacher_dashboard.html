@@ -223,7 +223,7 @@
         <!-- Section: Overview -->
         <div id="section-overview" class="dashboard-section active">
             <div class="row g-4 mb-5">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="stat-card">
                         <div class="bg-teal bg-opacity-10 p-3 rounded-4 d-inline-block mb-3" style="color: var(--primary-teal)">
                             <i class="fa-solid fa-user-group fa-xl"></i>
@@ -232,13 +232,31 @@
                         <p class="text-muted small mb-0 fw-bold">Supervised Students</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="stat-card">
                         <div class="bg-purple bg-opacity-10 p-3 rounded-4 d-inline-block mb-3" style="color: var(--primary-purple)">
                             <i class="fa-solid fa-file-invoice fa-xl"></i>
                         </div>
                         <h2 class="fw-bold mb-1">{{ exams.count }}</h2>
                         <p class="text-muted small mb-0 fw-bold">Active Exam Papers</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-4 d-inline-block mb-3 text-warning">
+                            <i class="fa-solid fa-clipboard-check fa-xl"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ review_count }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Need Evaluation</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="bg-danger bg-opacity-10 p-3 rounded-4 d-inline-block mb-3 text-danger">
+                            <i class="fa-solid fa-triangle-exclamation fa-xl"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">{{ flagged_count }}</h2>
+                        <p class="text-muted small mb-0 fw-bold">Integrity Alerts</p>
                     </div>
                 </div>
             </div>
@@ -255,14 +273,29 @@
                                 <th>Subject</th>
                                 <th>Result</th>
                                 <th>Evaluation</th>
+                                <th class="text-end">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for session in recent_sessions %}
                             <tr>
                                 <td class="fw-bold">{{ session.student.username }}</td>
-                                <td>{{ session.video.course.title|default:session.exam.course.title }}</td>
-                                <td><span class="fw-bold">{{ session.score|floatformat:0 }}%</span></td>
+                                <td>
+                                    {% if session.video %}
+                                        {{ session.video.course.title }}
+                                    {% elif session.exam %}
+                                        {{ session.exam.course.title }}
+                                    {% else %}
+                                        Unknown Subject
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if session.is_reviewed %}
+                                        <span class="fw-bold">{{ session.score|floatformat:0 }}%</span>
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">Hidden</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if session.is_reviewed %}
                                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">Graded</span>
@@ -270,9 +303,16 @@
                                         <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill">Awaiting Review</span>
                                     {% endif %}
                                 </td>
+                                <td class="text-end">
+                                    {% if session.exam %}
+                                        <a href="{% url 'grade_exam_session' session.id %}" class="btn btn-sm btn-primary rounded-pill px-3">Evaluate</a>
+                                    {% else %}
+                                        <a href="{% url 'teacher_review_exam' session.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">Check</a>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center py-5 text-muted">No assessment activity found.</td></tr>
+                            <tr><td colspan="5" class="text-center py-5 text-muted">No assessment activity found.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -303,8 +343,9 @@
                                 <th style="width: 40px;"><input type="checkbox" id="selectAllStudents" class="form-check-input"></th>
                                 <th>Student Name</th>
                                 <th>Subject</th>
-                                <th>Joined</th>
-                                <th>Actions</th>
+                                <th>Exam Control</th>
+                                <th>Integrity</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -315,9 +356,48 @@
                                     <div class="fw-bold">{{ assignment.student.first_name }} {{ assignment.student.last_name }}</div>
                                     <small class="text-muted">{{ assignment.student.email }}</small>
                                 </td>
-                                <td><span class="badge bg-light text-primary border rounded-pill">{{ assignment.course.title }}</span></td>
-                                <td>{{ assignment.student.date_joined|date:"M d, Y" }}</td>
                                 <td>
+                                    <span class="badge bg-light text-primary border rounded-pill">{{ assignment.course.title }}</span>
+                                    <div class="small text-muted mt-1">Joined {{ assignment.student.date_joined|date:"M d, Y" }}</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">{{ assignment.assigned_exam_count }} Assigned</span>
+                                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">{{ assignment.submitted_exam_count }} Waiting</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill">{{ assignment.completed_exam_count }} Published</span>
+                                    </div>
+                                    {% if assignment.assigned_exams %}
+                                        <div class="small text-muted">
+                                            Latest:
+                                            {% for exam_assignment in assignment.assigned_exams|slice:":2" %}
+                                                <span class="fw-semibold text-dark">{{ exam_assignment.exam.title }}</span>{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="small text-muted">No exam assigned yet.</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if assignment.flagged_session_count %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill">
+                                            <i class="fa-solid fa-triangle-exclamation me-1"></i>{{ assignment.flagged_session_count }} Flagged
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">
+                                            <i class="fa-solid fa-shield-check me-1"></i>Clean
+                                        </span>
+                                    {% endif %}
+                                    {% if assignment.review_session_count %}
+                                        <div class="small text-warning fw-bold mt-2">{{ assignment.review_session_count }} needs review</div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button onclick="openSingleStudentAssignModal('{{ assignment.student.id }}', '{{ assignment.student.get_full_name|default:assignment.student.username }}')" class="btn btn-sm btn-purple text-white rounded-pill px-3 me-1">
+                                        <i class="fa-solid fa-paper-plane"></i>
+                                    </button>
+                                    <a href="{% url 'teacher_proctoring_dashboard' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
                                     <button class="btn btn-sm btn-outline-teal rounded-pill px-3 me-1"
                                             onclick="openEditStudentModal('{{ assignment.student.id }}', '{{ assignment.student.first_name }}', '{{ assignment.student.last_name }}', '{{ assignment.student.email }}')">
                                         <i class="fa-solid fa-user-pen"></i>
@@ -328,7 +408,7 @@
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center py-5 text-muted">No students assigned yet.</td></tr>
+                            <tr><td colspan="6" class="text-center py-5 text-muted">No students assigned yet.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -670,6 +750,40 @@
     </div>
 </div>
 
+<!-- Modal: Assign Exam to One Student -->
+<div class="modal fade" id="singleStudentAssignExamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-purple bg-opacity-10 p-3 rounded-circle d-inline-block mb-3" style="color: var(--primary-purple)">
+                        <i class="fa-solid fa-paper-plane fa-2xl"></i>
+                    </div>
+                    <h5 class="fw-bold">Assign Exam</h5>
+                    <p class="text-muted small">Assigning an assessment to <span id="single_student_name" class="fw-bold text-dark"></span>.</p>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="assign_exam">
+                    <input type="hidden" name="student_ids" id="single_student_id">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Select Assessment Paper</label>
+                        <select name="exam_id" class="form-select form-select-lg rounded-3 border-2" required>
+                            <option value="">-- Choose Exam --</option>
+                            {% for exam in exams %}
+                            <option value="{{ exam.id }}">{{ exam.title }} ({{ exam.course.title }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-purple py-3 text-white fw-bold shadow-sm rounded-pill">ASSIGN EXAM</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Bulk Assign Exam (From Student List) -->
 <div class="modal fade" id="bulkAssignExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -739,6 +853,12 @@
         document.getElementById('assign_exam_id_input').value = id;
         document.getElementById('assign_exam_name').textContent = title;
         new bootstrap.Modal(document.getElementById('assignExamToStudentsModal')).show();
+    }
+
+    function openSingleStudentAssignModal(studentId, studentName) {
+        document.getElementById('single_student_id').value = studentId;
+        document.getElementById('single_student_name').textContent = studentName;
+        new bootstrap.Modal(document.getElementById('singleStudentAssignExamModal')).show();
     }
 
     function openEditSubjectModal(id, title, desc) {
