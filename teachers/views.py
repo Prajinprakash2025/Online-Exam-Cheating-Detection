@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from courses.models import Course, Video, Quiz, QuizSession, Exam, ExamQuestion, ExamAssignment, StudentAnswer
 from courses.forms import QuizForm
+from courses.proctoring import calculate_risk_report
 from examiners.forms import SubjectForm
 from .models import TeacherStudentAssignment
 from .forms import StudentCreateForm
@@ -351,7 +352,9 @@ def create_student(request):
 def teacher_proctoring_dashboard(request):
     # Show only sessions for the students assigned to this teacher
     assigned_students = TeacherStudentAssignment.objects.filter(teacher=request.user).values_list('student', flat=True)
-    sessions = QuizSession.objects.filter(student__in=assigned_students).exclude(status='ongoing').order_by('-start_time')
+    sessions = QuizSession.objects.filter(student__in=assigned_students).exclude(status='ongoing').prefetch_related('proctoring_logs').order_by('-start_time')
+    for session in sessions:
+        session.risk_report = calculate_risk_report(session.proctoring_logs.all())
     return render(request, 'teachers/teacher_proctoring_dashboard.html', {'sessions': sessions})
 
 
@@ -362,6 +365,7 @@ def teacher_review_exam(request, session_id):
     from django.utils import timezone
     session = get_object_or_404(QuizSession, id=session_id)
     logs = session.proctoring_logs.all().order_by('timestamp')
+    risk_report = calculate_risk_report(logs)
 
     # Ensure teacher manages this student
     if not TeacherStudentAssignment.objects.filter(teacher=request.user, student=session.student).exists():
@@ -411,6 +415,7 @@ def teacher_review_exam(request, session_id):
     return render(request, 'review_quiz_session.html', {
         'session': session,
         'logs': logs,
+        'risk_report': risk_report,
         'is_teacher': True,
         'back_url': 'teacher_proctoring_dashboard'
     })
@@ -526,9 +531,11 @@ def grade_exam_session(request, session_id):
 
     answers = session.answers.select_related('question').all()
     logs = session.proctoring_logs.all().order_by('-timestamp')
+    risk_report = calculate_risk_report(logs)
     
     return render(request, 'teachers/grade_exam_session.html', {
         'session': session,
         'answers': answers,
-        'logs': logs
+        'logs': logs,
+        'risk_report': risk_report,
     })

@@ -32,6 +32,7 @@ urlpatterns = [
     path('mentors/', views.mentors, name='mentors'),
     path('contact/', views.contact, name='contact'),
     path('courses/', views.course_list, name='course_list'), 
+    path('course/<int:course_id>/request-access/', views.request_course_access, name='request_course_access'),
 
     # --- Video & Quiz Management ---
     path('video/<int:video_id>/delete/', views.delete_video, name='delete_video'),

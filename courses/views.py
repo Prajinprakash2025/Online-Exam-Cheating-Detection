@@ -9,15 +9,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Count, Q
 from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib import messages
 from django.http import JsonResponse
 from django.core.files.base import ContentFile
 
-from .models import Course, Video, User, Progress, Quiz, Enrollment, Review, Comment, QuizSession, ProctoringLog
+from .models import Course, Video, User, Progress, Quiz, Enrollment, Review, Comment, QuizSession, ProctoringLog, CourseAccessRequest
 from .forms import CourseForm, VideoForm, QuizForm, StudentSignupForm, ReviewForm, CommentForm
+from .proctoring import calculate_risk_report
 
 # ------------------------------------------------------------------
 # ACCESS CONTROL HELPERS
@@ -78,10 +78,63 @@ def course_list(request):
             Q(description__icontains=query) 
         )
 
+    course_list_items = list(courses)
+    enrolled_course_ids = set()
+    access_requests_by_course = {}
+
+    if request.user.is_authenticated:
+        enrolled_course_ids = set(Enrollment.objects.filter(
+            student=request.user
+        ).values_list('course_id', flat=True))
+        access_requests_by_course = {
+            item.course_id: item for item in CourseAccessRequest.objects.filter(student=request.user)
+        }
+
+    for course in course_list_items:
+        course.is_enrolled = course.id in enrolled_course_ids
+        course.access_request = access_requests_by_course.get(course.id)
+
     return render(request, 'courses.html', {
-        'courses': courses, 
+        'courses': course_list_items,
         'query': query 
     })
+
+
+@login_required
+def request_course_access(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if not request.user.is_student:
+        messages.error(request, "Only student accounts can request subject access.")
+        return redirect('course_list')
+
+    if Enrollment.objects.filter(student=request.user, course=course).exists():
+        messages.info(request, "You already have access to this subject.")
+        return redirect('course_viewer', course_id=course.id, video_order=1)
+
+    access_request, created = CourseAccessRequest.objects.get_or_create(
+        student=request.user,
+        course=course,
+        defaults={'status': 'pending'},
+    )
+
+    if not created and access_request.status == 'rejected':
+        access_request.status = 'pending'
+        access_request.requested_at = timezone.now()
+        access_request.reviewed_at = None
+        access_request.reviewed_by = None
+        access_request.save()
+        messages.success(request, "Your access request was sent again. Please wait for conductor approval.")
+    elif created:
+        messages.success(request, "Access request sent. Please wait for conductor approval.")
+    elif access_request.status == 'approved':
+        Enrollment.objects.get_or_create(student=request.user, course=course)
+        messages.success(request, "Your access is approved. You can start learning now.")
+        return redirect('course_viewer', course_id=course.id, video_order=1)
+    else:
+        messages.info(request, "Your request is already pending conductor approval.")
+
+    return redirect('course_list')
 
 def mentors(request):
     return render(request, 'mentors.html')
@@ -98,6 +151,70 @@ def signup_view(request):
     # Student self-signup is disabled per new "Exam Portal" logic.
     # Redirect to a page explaining that access is granted by Teachers/Examiners.
     return render(request, 'restricted_signup.html')
+
+
+STUDENT_LOGIN_OTP_MINUTES = 10
+
+
+def _clear_student_login_otp(request):
+    for key in (
+        'student_login_user_id',
+        'student_login_email',
+        'student_login_otp',
+        'student_login_otp_expires_at',
+        'student_login_next',
+    ):
+        request.session.pop(key, None)
+
+
+def _print_student_login_otp(email, otp):
+    print("\n" + "=" * 64)
+    print(f"ExamGate student login OTP for {email}: {otp}")
+    print("=" * 64 + "\n")
+
+
+def _send_student_login_otp(email, otp, user):
+    _print_student_login_otp(email, otp)
+
+    subject = 'Your ExamGate Student Login OTP'
+    message = (
+        f"Hello {user.first_name or user.username},\n\n"
+        f"Your ExamGate student login OTP is: {otp}\n\n"
+        f"This code is valid for {STUDENT_LOGIN_OTP_MINUTES} minutes."
+    )
+    from_email = settings.DEFAULT_FROM_EMAIL
+
+    if not from_email:
+        return
+
+    try:
+        send_mail(subject, message, from_email, [email], fail_silently=False)
+    except Exception as exc:
+        if not settings.DEBUG:
+            raise
+        print(f"Student login OTP email delivery skipped in DEBUG after error: {exc}")
+
+
+def _student_login_context(request):
+    expires_at = request.session.get('student_login_otp_expires_at')
+    otp_email = request.session.get('student_login_email')
+    next_url = request.session.get('student_login_next') or ''
+    is_admin_login = next_url == '/dashboard/' or next_url == 'instructor_dashboard'
+
+    if not expires_at or not otp_email:
+        return {'otp_sent': False, 'is_admin_login': is_admin_login}
+
+    try:
+        expires_at = float(expires_at)
+    except (TypeError, ValueError):
+        _clear_student_login_otp(request)
+        return {'otp_sent': False}
+
+    if timezone.now().timestamp() > expires_at:
+        _clear_student_login_otp(request)
+        return {'otp_sent': False}
+
+    return {'otp_sent': True, 'otp_email': otp_email, 'is_admin_login': is_admin_login}
 
 def verify_otp(request):
     if request.method == 'POST':
@@ -128,18 +245,91 @@ def verify_otp(request):
     return render(request, 'verify_otp.html', {'email': email})
 
 def login_view(request):
+    if request.GET.get('reset') == '1':
+        _clear_student_login_otp(request)
+        return redirect('login')
+
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
+        action = request.POST.get('action')
+
+        if action == 'verify_login_otp':
+            entered_otp = (request.POST.get('otp') or '').strip()
+            saved_otp = str(request.session.get('student_login_otp') or '')
+            user_id = request.session.get('student_login_user_id')
+            expires_at = request.session.get('student_login_otp_expires_at')
+
+            if not user_id or not saved_otp or not expires_at:
+                messages.error(request, "Please request a fresh login OTP.")
+                return redirect('login')
+
+            try:
+                expires_at = float(expires_at)
+            except (TypeError, ValueError):
+                _clear_student_login_otp(request)
+                messages.error(request, "Please request a fresh login OTP.")
+                return redirect('login')
+
+            if timezone.now().timestamp() > expires_at:
+                _clear_student_login_otp(request)
+                messages.error(request, "Your login OTP expired. Please request a new one.")
+                return redirect('login')
+
+            if entered_otp != saved_otp:
+                messages.error(request, "Invalid OTP. Please try again.")
+                context = _student_login_context(request)
+                context['next'] = request.session.get('student_login_next', '')
+                return render(request, 'login.html', context)
+
+            user = get_object_or_404(User, id=user_id, is_active=True)
+            next_url = request.session.get('student_login_next') or 'home'
             login(request, user)
-            if 'next' in request.POST:
-                return redirect(request.POST.get('next'))
-            return redirect('home')
-    else:
-        form = AuthenticationForm()
-    
-    return render(request, 'login.html', {'form': form})
+            _clear_student_login_otp(request)
+            if next_url == 'home' and (user.is_instructor or user.is_superuser):
+                return redirect('instructor_dashboard')
+            return redirect(next_url)
+
+        email = (request.POST.get('email') or '').strip().lower()
+        next_url = request.POST.get('next') or request.GET.get('next') or ''
+        is_admin_login = next_url == '/dashboard/' or next_url == 'instructor_dashboard'
+
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if is_admin_login:
+            allowed_user = user and (user.is_instructor or user.is_superuser)
+            error_message = "No active admin account was found for that email."
+        else:
+            allowed_user = user and (user.is_student or user.is_instructor or user.is_superuser)
+            error_message = "No active portal account was found for that email."
+
+        if not allowed_user:
+            messages.error(request, error_message)
+            return render(request, 'login.html', {
+                'otp_sent': False,
+                'next': next_url,
+                'email_value': email,
+                'is_admin_login': is_admin_login,
+            })
+
+        otp = f"{random.randint(100000, 999999)}"
+        _send_student_login_otp(user.email, otp, user)
+
+        request.session['student_login_user_id'] = user.id
+        request.session['student_login_email'] = user.email
+        request.session['student_login_otp'] = otp
+        request.session['student_login_otp_expires_at'] = (
+            timezone.now() + timedelta(minutes=STUDENT_LOGIN_OTP_MINUTES)
+        ).timestamp()
+        request.session['student_login_next'] = next_url or 'home'
+
+        messages.success(request, f"OTP generated for {user.email}. Check your terminal for the code.")
+        context = _student_login_context(request)
+        context['next'] = next_url
+        context['is_admin_login'] = is_admin_login
+        return render(request, 'login.html', context)
+
+    context = _student_login_context(request)
+    context['next'] = request.GET.get('next', '')
+    context['is_admin_login'] = context['next'] == '/dashboard/' or context['next'] == 'instructor_dashboard'
+    return render(request, 'login.html', context)
 
 def logout_view(request):
     logout(request)
@@ -247,10 +437,10 @@ def course_viewer(request, course_id, video_order):
     course = get_object_or_404(Course, id=course_id)
     video = get_object_or_404(Video, course=course, order=video_order)
     
-    enrollment, created = Enrollment.objects.get_or_create(
-        student=request.user, 
-        course=course
-    )
+    enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
+    if not enrollment:
+        messages.error(request, "Please request access. A conductor must approve this subject before you can attend.")
+        return redirect('course_list')
 
     if video_order > enrollment.current_lesson_index:
         return render(request, 'locked.html', {'course': course})
@@ -846,13 +1036,16 @@ def instructor_dashboard(request):
 
 @user_passes_test(is_admin)
 def admin_proctoring_dashboard(request):
-    sessions = QuizSession.objects.exclude(status='ongoing').order_by('-start_time')
+    sessions = QuizSession.objects.exclude(status='ongoing').prefetch_related('proctoring_logs').order_by('-start_time')
+    for session in sessions:
+        session.risk_report = calculate_risk_report(session.proctoring_logs.all())
     return render(request, 'admin_proctoring_dashboard.html', {'sessions': sessions})
 
 @user_passes_test(is_admin)
 def review_quiz_session(request, session_id):
     session = get_object_or_404(QuizSession, id=session_id)
     logs = session.proctoring_logs.all().order_by('timestamp')
+    risk_report = calculate_risk_report(logs)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -873,7 +1066,8 @@ def review_quiz_session(request, session_id):
 
     context = {
         'session': session,
-        'logs': logs
+        'logs': logs,
+        'risk_report': risk_report,
     }
     return render(request, 'review_quiz_session.html', context)
 

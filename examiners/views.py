@@ -13,7 +13,7 @@ from django.utils import timezone
 from .forms import ExaminerSignupForm, ExaminerStudentCreateForm, SubjectForm
 from teachers.forms import TeacherCreateForm
 from teachers.models import TeacherStudentAssignment
-from courses.models import Course, QuizSession, ProctoringLog, Exam, ExamQuestion, ExamAssignment
+from courses.models import Course, QuizSession, ProctoringLog, Exam, ExamQuestion, ExamAssignment, CourseAccessRequest, Enrollment
 from .models import ExaminerTeacherAssignment
 
 User = get_user_model()
@@ -479,6 +479,7 @@ def examiner_dashboard(request):
         'candidate_form': candidate_form,
         'subject_form': subject_form,
         'active_modal': active_modal,
+        'access_requests': CourseAccessRequest.objects.filter(status='pending').select_related('student', 'course').order_by('-requested_at'),
     })
 
 
@@ -589,6 +590,30 @@ def delete_exam_question(request, question_id):
     question.delete()
     messages.success(request, "Question removed from exam paper.")
     return redirect('examiner_exam_questions', exam_id=exam_id)
+
+
+@login_required
+@user_passes_test(is_examiner)
+def review_course_access(request, request_id, decision):
+    access_request = get_object_or_404(CourseAccessRequest, id=request_id, status='pending')
+
+    if decision == 'approve':
+        access_request.status = 'approved'
+        access_request.reviewed_by = request.user
+        access_request.reviewed_at = timezone.now()
+        access_request.save()
+        Enrollment.objects.get_or_create(student=access_request.student, course=access_request.course)
+        messages.success(request, f"Approved {access_request.course.title} for {access_request.student.get_full_name() or access_request.student.username}.")
+    elif decision == 'reject':
+        access_request.status = 'rejected'
+        access_request.reviewed_by = request.user
+        access_request.reviewed_at = timezone.now()
+        access_request.save()
+        messages.info(request, f"Rejected {access_request.course.title} request.")
+    else:
+        messages.error(request, "Invalid access decision.")
+
+    return redirect('/examiners/dashboard/#access')
 
 
 @login_required

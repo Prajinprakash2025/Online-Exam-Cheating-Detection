@@ -127,7 +127,39 @@
                 </div>
 
                 <div class="card border-0 shadow-lg rounded-4 p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="fw-bold text-muted text-uppercase ls-1 mb-1">Risk Score</h6>
+                            <p class="small text-muted mb-0">Calculated from proctoring violations.</p>
+                        </div>
+                        <span class="badge bg-{{ risk_report.color }} rounded-pill px-3 py-2">{{ risk_report.level }}</span>
+                    </div>
+                    <div class="d-flex align-items-end gap-2 mb-3">
+                        <span class="display-5 fw-bold text-{{ risk_report.color }}">{{ risk_report.score }}</span>
+                        <span class="fw-bold text-muted mb-2">/ 100</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 10px;">
+                        <div class="progress-bar bg-{{ risk_report.color }}" style="width: {{ risk_report.score }}%;"></div>
+                    </div>
+                    <p class="small fw-semibold text-dark mb-0">{{ risk_report.recommendation }}</p>
+                </div>
+
+                <div class="card border-0 shadow-lg rounded-4 p-4 mb-4">
                     <h6 class="fw-bold text-muted text-uppercase ls-1 mb-4">Integrity Report</h6>
+
+                    {% if risk_report.breakdown %}
+                    <div class="mb-4">
+                        {% for item in risk_report.breakdown %}
+                        <div class="d-flex justify-content-between align-items-center bg-light rounded-4 p-3 mb-2">
+                            <div>
+                                <div class="small fw-bold text-dark">{{ item.label }}</div>
+                                <div class="text-muted small">{{ item.count }} event{{ item.count|pluralize }}</div>
+                            </div>
+                            <span class="badge bg-{{ risk_report.color }} rounded-pill">{{ item.points }} pts</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     
                     {% for log in logs|slice:":5" %}
                     <div class="d-flex gap-3 mb-3 pb-3 border-bottom last-child-0">
@@ -156,11 +188,7 @@
 
                 <div class="card border-0 bg-dark text-white rounded-4 p-4">
                     <h6 class="small fw-bold text-muted text-uppercase ls-1 mb-3">AI Recommendation</h6>
-                    {% if logs.count > 10 %}
-                        <p class="small mb-0 text-white-50"><i class="fa-solid fa-robot me-2"></i> System detects high probability of integrity breach. Recommendation: <strong>Invalidate Session</strong>.</p>
-                    {% else %}
-                        <p class="small mb-0 text-white-50"><i class="fa-solid fa-robot me-2"></i> No significant patterns of suspicious behaviour detected.</p>
-                    {% endif %}
+                    <p class="small mb-0 text-white-50"><i class="fa-solid fa-robot me-2"></i>{{ risk_report.recommendation }}</p>
                 </div>
 
                 <div class="card border-0 shadow-lg rounded-4 p-4 mt-4">

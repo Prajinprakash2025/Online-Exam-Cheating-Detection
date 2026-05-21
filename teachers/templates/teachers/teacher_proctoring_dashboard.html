@@ -146,6 +146,7 @@
                             <th>Subject / Course</th>
                             <th class="text-center">Score</th>
                             <th>Integrity Status</th>
+                            <th>Risk</th>
                             <th class="text-end">Action</th>
                         </tr>
                     </thead>
@@ -189,6 +190,13 @@
                                     <span class="badge bg-light text-muted border px-3 rounded-pill">Pending Review</span>
                                 {% endif %}
                             </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-{{ session.risk_report.color }} rounded-pill px-3">{{ session.risk_report.level }}</span>
+                                    <span class="small fw-bold text-dark">{{ session.risk_report.score }}/100</span>
+                                </div>
+                                <div class="small text-muted">{{ session.risk_report.total_events }} event{{ session.risk_report.total_events|pluralize }}</div>
+                            </td>
                             <td class="text-end">
                                 {% if session.exam %}
                                     <a href="{% url 'grade_exam_session' session.id %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
@@ -203,7 +211,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-5">
+                            <td colspan="7" class="text-center text-muted py-5">
                                 <i class="fa-solid fa-inbox display-6 d-block mb-3 opacity-25"></i>
                                 No completed assessment sessions found for your students.
                             </td>

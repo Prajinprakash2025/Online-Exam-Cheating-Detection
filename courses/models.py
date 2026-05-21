@@ -168,6 +168,27 @@ class Enrollment(models.Model):
     class Meta:
         unique_together = ('student', 'course')
 
+class CourseAccessRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='course_access_requests')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='access_requests')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_course_requests')
+
+    class Meta:
+        unique_together = ('student', 'course')
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"{self.student} requested {self.course} ({self.status})"
+
 class Progress(models.Model):
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     video = models.ForeignKey(Video, on_delete=models.CASCADE)

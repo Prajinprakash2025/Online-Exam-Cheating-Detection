@@ -44,6 +44,33 @@
                         {% elif session.status == 'disqualified' %}<span class="badge bg-danger px-3 py-2 rounded-pill ms-2">Disqualified</span>
                         {% else %}<span class="badge bg-success px-3 py-2 rounded-pill ms-2">Submitted / Approved</span>{% endif %}
                     </p>
+
+                    <div class="bg-light rounded-4 p-3 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small text-uppercase fw-bold">Risk Score</span>
+                            <span class="badge bg-{{ risk_report.color }} rounded-pill">{{ risk_report.level }}</span>
+                        </div>
+                        <div class="d-flex align-items-end gap-2 mb-2">
+                            <span class="fs-2 fw-bold text-{{ risk_report.color }}">{{ risk_report.score }}</span>
+                            <span class="fw-bold text-muted mb-1">/ 100</span>
+                        </div>
+                        <div class="progress mb-3" style="height: 8px;">
+                            <div class="progress-bar bg-{{ risk_report.color }}" style="width: {{ risk_report.score }}%;"></div>
+                        </div>
+                        <p class="small fw-semibold text-dark mb-0">{{ risk_report.recommendation }}</p>
+                    </div>
+
+                    {% if risk_report.breakdown %}
+                    <div class="mb-4">
+                        <p class="text-muted small text-uppercase fw-bold mb-2">Violation Breakdown</p>
+                        {% for item in risk_report.breakdown %}
+                        <div class="d-flex justify-content-between align-items-center border rounded-4 p-2 mb-2">
+                            <span class="small fw-bold">{{ item.label }}</span>
+                            <span class="badge bg-secondary rounded-pill">{{ item.count }} / {{ item.points }} pts</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     
                     <hr class="mb-4 opacity-25">
                     

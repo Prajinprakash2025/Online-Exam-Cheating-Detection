@@ -258,6 +258,9 @@
             <a onclick="switchSection('subjects', this)" class="sidebar-link">
                 <i class="fa-solid fa-book-bookmark"></i> Exam Subjects
             </a>
+            <a onclick="switchSection('access', this)" class="sidebar-link">
+                <i class="fa-solid fa-unlock-keyhole"></i> Subject Access
+            </a>
             <a onclick="switchSection('exams', this)" class="sidebar-link">
                 <i class="fa-solid fa-file-signature"></i> Manage Exams
             </a>
@@ -504,6 +507,52 @@
                             {% if not candidates %}
                             <tr><td colspan="6" class="text-center py-5 text-muted">No candidates assigned to your portal.</td></tr>
                             {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-access" class="dashboard-section">
+            <div class="glass-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                    <div>
+                        <h5 class="mb-0 fw-bold">Subject Access Requests</h5>
+                        <p class="text-muted smaller mb-0">Approve purchased/requested subjects before students can attend.</p>
+                    </div>
+                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2">{{ access_requests.count }} Pending</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Subject</th>
+                                <th>Requested</th>
+                                <th class="text-end">Decision</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for access_request in access_requests %}
+                            <tr>
+                                <td>
+                                    <p class="mb-0 fw-bold">{{ access_request.student.get_full_name|default:access_request.student.username }}</p>
+                                    <small class="text-muted">{{ access_request.student.email }}</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark border rounded-pill">{{ access_request.course.title }}</span></td>
+                                <td class="text-muted small">{{ access_request.requested_at|timesince }} ago</td>
+                                <td class="text-end">
+                                    <a href="{% url 'review_course_access' access_request.id 'approve' %}" class="btn btn-sm btn-success rounded-pill px-3 me-1">
+                                        <i class="fa-solid fa-check me-1"></i> Approve
+                                    </a>
+                                    <a href="{% url 'review_course_access' access_request.id 'reject' %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                        <i class="fa-solid fa-xmark me-1"></i> Reject
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-5 text-muted">No pending subject access requests.</td></tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

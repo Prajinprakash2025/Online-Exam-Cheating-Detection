@@ -42,6 +42,10 @@
         color: white;
         transform: translateY(-2px);
     }
+
+    .status-note {
+        min-height: 36px;
+    }
 </style>
 
 <div style="background-color: var(--bg-cream); padding: 5rem 0;">
@@ -128,9 +132,47 @@
                     </p>
                     
                     <div class="mt-auto">
-                        <a href="{% url 'course_viewer' course.id 1 %}" class="btn btn-outline-dark w-100 rounded-pill fw-bold">
-                            Start Learning <i class="fa-solid fa-arrow-right ms-1 opacity-50"></i>
-                        </a>
+                        {% if user.is_authenticated and user.is_student %}
+                            {% if course.is_enrolled %}
+                                <div class="status-note small text-success fw-bold mb-2">
+                                    <i class="fa-solid fa-circle-check me-1"></i> Approved by conductor
+                                </div>
+                                <a href="{% url 'course_viewer' course.id 1 %}" class="btn btn-outline-dark w-100 rounded-pill fw-bold">
+                                    Start Learning <i class="fa-solid fa-arrow-right ms-1 opacity-50"></i>
+                                </a>
+                            {% elif course.access_request and course.access_request.status == 'pending' %}
+                                <div class="status-note small text-warning fw-bold mb-2">
+                                    <i class="fa-solid fa-hourglass-half me-1"></i> Waiting for conductor approval
+                                </div>
+                                <button class="btn btn-outline-warning w-100 rounded-pill fw-bold" disabled>
+                                    Request Pending
+                                </button>
+                            {% elif course.access_request and course.access_request.status == 'rejected' %}
+                                <div class="status-note small text-danger fw-bold mb-2">
+                                    <i class="fa-solid fa-circle-xmark me-1"></i> Request rejected
+                                </div>
+                                <a href="{% url 'request_course_access' course.id %}" class="btn btn-outline-danger w-100 rounded-pill fw-bold">
+                                    Request Again
+                                </a>
+                            {% else %}
+                                <div class="status-note small text-muted fw-semibold mb-2">
+                                    Purchase/request this subject, then wait for conductor approval.
+                                </div>
+                                <a href="{% url 'request_course_access' course.id %}" class="btn btn-custom w-100 rounded-pill fw-bold">
+                                    Request Subject Access <i class="fa-solid fa-paper-plane ms-1"></i>
+                                </a>
+                            {% endif %}
+                        {% elif user.is_authenticated %}
+                            <div class="status-note small text-muted fw-semibold mb-2">Student account required to request access.</div>
+                            <button class="btn btn-outline-secondary w-100 rounded-pill fw-bold" disabled>
+                                Student Only
+                            </button>
+                        {% else %}
+                            <div class="status-note small text-muted fw-semibold mb-2">Login as a student to request access.</div>
+                            <a href="{% url 'login' %}?next={% url 'course_list' %}" class="btn btn-outline-dark w-100 rounded-pill fw-bold">
+                                Login to Request <i class="fa-solid fa-arrow-right ms-1 opacity-50"></i>
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

@@ -224,81 +224,92 @@
     <!-- Left Story -->
     <div class="auth-story">
       <div class="story-icon">
-        <i class="fa-solid fa-user-shield"></i>
+        {% if is_admin_login %}
+          <i class="fa-solid fa-user-gear"></i>
+        {% else %}
+          <i class="fa-solid fa-user-shield"></i>
+        {% endif %}
       </div>
-      <h2>Student <br>Authentication</h2>
-      <p class="opacity-75">Connect to your personal learning dashboard and access your examination schedule.</p>
+      {% if is_admin_login %}
+        <h2>Admin <br>Authentication</h2>
+        <p class="opacity-75">Access the custom ExamGate control panel, reports, and proctoring reviews.</p>
+      {% else %}
+        <h2>Student <br>Authentication</h2>
+        <p class="opacity-75">Connect to your personal learning dashboard and access your examination schedule.</p>
+      {% endif %}
     </div>
 
     <!-- Right Form -->
     <div class="auth-form-side">
       <div class="form-header">
-        <h3>Sign In</h3>
-        <p class="text-muted small">Enter your credentials to access the portal</p>
+        <h3>{% if otp_sent %}Verify OTP{% elif is_admin_login %}Admin Sign In{% else %}Student Sign In{% endif %}</h3>
+        <p class="text-muted small">
+          {% if otp_sent %}
+            Enter the OTP generated for {{ otp_email }}.
+          {% elif is_admin_login %}
+            Enter your admin email to receive a one-time login code.
+          {% else %}
+            Enter your registered email to receive a one-time login code.
+          {% endif %}
+        </p>
       </div>
 
-      {% if form.errors %}
-      <div class="alert alert-danger border-0 rounded-4 small mb-4">
-        <i class="fa-solid fa-circle-exclamation me-2"></i> Invalid username or password.
-      </div>
+      {% if messages %}
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} border-0 rounded-4 small mb-4">
+          <i class="fa-solid {% if message.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %} me-2"></i> {{ message }}
+        </div>
+        {% endfor %}
       {% endif %}
 
       <form method="post">
         {% csrf_token %}
-        
-        <div class="field-group">
-          <i class="fa-regular fa-envelope field-icon"></i>
-          <input type="email" name="username" placeholder="Email Address" required>
-        </div>
+        <input type="hidden" name="next" value="{{ next }}">
 
-        <div class="field-group">
-          <i class="fa-solid fa-lock field-icon"></i>
-          <input type="password" name="password" id="passwordInput" placeholder="Password" required>
-          <span class="pwd-toggle" onclick="togglePassword()">
-            <i class="fa-solid fa-eye-slash" id="toggleIcon"></i>
-          </span>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-4 small fw-bold">
-          <div class="form-check p-0 d-flex align-items-center gap-2">
-            <input class="form-check-input m-0" type="checkbox" id="rememberMe" style="width: 18px; height: 18px;">
-            <label class="form-check-label text-muted" for="rememberMe">Remember me</label>
+        {% if otp_sent %}
+          <input type="hidden" name="action" value="verify_login_otp">
+          <div class="field-group">
+            <i class="fa-solid fa-key field-icon"></i>
+            <input type="text" name="otp" placeholder="Enter 6-digit OTP" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required autofocus>
           </div>
-          <a href="{% url 'forgot_password' %}" class="text-muted text-decoration-none">Forgot Password?</a>
-        </div>
 
-        <button type="submit" class="btn-auth">
-          AUTHENTICATE ACCESS <i class="fa-solid fa-arrow-right ms-2"></i>
-        </button>
+          <button type="submit" class="btn-auth">
+            VERIFY & LOGIN <i class="fa-solid fa-arrow-right ms-2"></i>
+          </button>
 
-        <div class="divider">OR CONTINUE WITH</div>
+          <div class="auth-footer">
+            Wrong email? <a href="{% url 'login' %}?reset=1">Request a new OTP</a>
+          </div>
+        {% else %}
+          <input type="hidden" name="action" value="request_login_otp">
+          <div class="field-group">
+            <i class="fa-regular fa-envelope field-icon"></i>
+            <input type="email" name="email" value="{{ email_value|default:'' }}" placeholder="Email Address" required autofocus>
+          </div>
 
-        <div class="social-grid">
-          <a href="#" class="social-btn"><i class="fa-brands fa-google"></i></a>
-          <a href="#" class="social-btn"><i class="fa-brands fa-facebook"></i></a>
-          <a href="#" class="social-btn"><i class="fa-brands fa-apple"></i></a>
-        </div>
+          <div class="d-flex justify-content-between align-items-center mb-4 small fw-bold">
+            <span class="text-muted">OTP will be printed in the terminal.</span>
+            {% if not is_admin_login %}
+              <a href="{% url 'forgot_password' %}" class="text-muted text-decoration-none">Forgot Password?</a>
+            {% endif %}
+          </div>
 
-        <div class="auth-footer">
-          Don't have an account? <a href="{% url 'signup' %}">Create Student Profile</a>
-        </div>
+          <button type="submit" class="btn-auth">
+            SEND LOGIN OTP <i class="fa-solid fa-paper-plane ms-2"></i>
+          </button>
+
+          <div class="auth-footer">
+            {% if is_admin_login %}
+              This opens the custom admin panel, not Django default admin.
+            {% else %}
+              Student accounts are created by your teacher or conductor.
+            {% endif %}
+          </div>
+        {% endif %}
       </form>
     </div>
 
   </div>
 </div>
 
-<script>
-  function togglePassword() {
-    const input = document.getElementById('passwordInput');
-    const icon = document.getElementById('toggleIcon');
-    if (input.type === 'password') {
-      input.type = 'text';
-      icon.classList.replace('fa-eye-slash', 'fa-eye');
-    } else {
-      input.type = 'password';
-      icon.classList.replace('fa-eye', 'fa-eye-slash');
-    }
-  }
-</script>
-{% endblock %}
+{% endblock %}
