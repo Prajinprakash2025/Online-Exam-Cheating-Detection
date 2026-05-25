@@ -185,6 +185,7 @@
           <ul class="navbar-nav mx-auto">
             <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'course_list' %}">Explore Subjects</a></li>      
+            <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">About</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contact</a></li>
           </ul>
 
@@ -271,15 +272,15 @@
                     <h5>Platform</h5>
                     <a href="{% url 'home' %}">Home</a>
                     <a href="{% url 'course_list' %}">Exam Subjects</a>
+                    <a href="{% url 'about' %}">About Us</a>
                     <a href="{% url 'mentors' %}">Our Examiners</a>
-                    <a href="#">Pricing</a>
                 </div>
                 <div class="col-lg-2 col-6 mb-4">
                     <h5>Support</h5>
                     <a href="{% url 'contact' %}">Help Center</a>
                     <a href="#">Terms of Service</a>
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">FAQ</a>
+                    <a href="{% url 'privacy_policy' %}">Privacy Policy</a>
+                    <a href="{% url 'faq' %}">FAQ</a>
                 </div>
                 <div class="col-lg-4">
                     <h5>Stay up to date</h5>

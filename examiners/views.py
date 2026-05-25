@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
-from .forms import ExaminerSignupForm, ExaminerStudentCreateForm, SubjectForm
+from .forms import ExaminerSignupForm, ExaminerStudentCreateForm
 from teachers.forms import TeacherCreateForm
 from teachers.models import TeacherStudentAssignment
 from courses.models import Course, QuizSession, ProctoringLog, Exam, ExamQuestion, ExamAssignment, CourseAccessRequest, Enrollment
@@ -279,6 +279,10 @@ def is_examiner(user):
     return user.is_authenticated and user.is_examiner
 
 
+def is_admin(user):
+    return user.is_authenticated and (user.is_instructor or user.is_superuser)
+
+
 def _first_form_error(form):
     for _field, errors in form.errors.items():
         if errors:
@@ -301,12 +305,39 @@ def examiner_dashboard(request):
     # Handle POST for Registration
     teacher_form = TeacherCreateForm()
     candidate_form = ExaminerStudentCreateForm(examiner=examiner)
-    subject_form = SubjectForm()
     active_modal = None
     
     if request.method == 'POST':
         action = request.POST.get('action')
-        if action == 'register_conductor':
+        if action == 'create_subject':
+            title = (request.POST.get('title') or '').strip()
+            description = (request.POST.get('description') or '').strip()
+            price = request.POST.get('price') or 0.00
+            if not title:
+                messages.error(request, "Please enter a subject title.")
+                return redirect('/examiners/dashboard/#subjects')
+            
+            Course.objects.create(
+                title=title,
+                description=description or f"Subject: {title}",
+                price=price,
+                created_by=examiner
+            )
+            messages.success(request, f"New Subject '{title}' created successfully.")
+            return redirect('/examiners/dashboard/#subjects')
+
+        elif action == 'edit_subject':
+            subject_id = request.POST.get('subject_id')
+            subject = get_object_or_404(Course, id=subject_id)
+            subject.title = request.POST.get('title', subject.title)
+            subject.description = request.POST.get('description', subject.description)
+            if 'price' in request.POST:
+                subject.price = request.POST.get('price', 0.00) or 0.00
+            subject.save()
+            messages.success(request, f"Course '{subject.title}' updated successfully.")
+            return redirect('/examiners/dashboard/#subjects')
+
+        elif action == 'register_conductor':
             teacher_form = TeacherCreateForm(request.POST)
             if teacher_form.is_valid():
                 teacher = teacher_form.save()
@@ -325,12 +356,6 @@ def examiner_dashboard(request):
             active_modal = 'registerCandidateModal'
             messages.error(request, f"Could not create candidate: {_first_form_error(candidate_form)}")
         
-        elif action == 'register_subject':
-            subject_form = SubjectForm(request.POST, request.FILES)
-            if subject_form.is_valid():
-                subject = subject_form.save()
-                messages.success(request, f"New exam subject '{subject.title}' created.")
-                return redirect('/examiners/dashboard/#subjects')
 
         elif action == 'create_exam':
             title = (request.POST.get('title') or '').strip()
@@ -381,14 +406,6 @@ def examiner_dashboard(request):
             messages.success(request, f"Successfully assigned '{exam.title}' to {count} candidates.")
             return redirect('/examiners/dashboard/#candidates')
         
-        elif action == 'edit_subject':
-            subject_id = request.POST.get('subject_id')
-            subject = get_object_or_404(Course, id=subject_id)
-            subject_form = SubjectForm(request.POST, request.FILES, instance=subject)
-            if subject_form.is_valid():
-                subject_form.save()
-                messages.success(request, f"Subject '{subject.title}' updated successfully.")
-                return redirect('/examiners/dashboard/#subjects')
 
         elif action == 'edit_exam':
             exam_id = request.POST.get('exam_id')
@@ -468,7 +485,7 @@ def examiner_dashboard(request):
     return render(request, 'examiners/examiner_dashboard.html', {
         'teachers': teachers,
         'candidates': managed_student_assignments,
-        'all_subjects': Course.objects.all().order_by('-created_at'),
+        'all_subjects': Course.objects.filter(created_by=examiner).order_by('-created_at'),
         'exams': Exam.objects.filter(created_by=examiner).prefetch_related('questions', 'assignments'),
         'total_teachers': len(teachers),
         'total_candidates': total_candidates,
@@ -477,9 +494,8 @@ def examiner_dashboard(request):
         'recent_sessions': recent_sessions,
         'teacher_form': teacher_form,
         'candidate_form': candidate_form,
-        'subject_form': subject_form,
+        'subject_form': None,
         'active_modal': active_modal,
-        'access_requests': CourseAccessRequest.objects.filter(status='pending').select_related('student', 'course').order_by('-requested_at'),
     })
 
 
@@ -513,15 +529,6 @@ def delete_candidate(request, student_id):
         messages.success(request, f"Candidate {student_name} removed from your managed list.")
     return redirect('examiner_dashboard')
 
-
-@login_required
-@user_passes_test(is_examiner)
-def delete_subject(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-    title = course.title
-    course.delete()
-    messages.success(request, f"Exam subject '{title}' has been deleted.")
-    return redirect('examiner_dashboard')
 
 
 @login_required
@@ -593,7 +600,7 @@ def delete_exam_question(request, question_id):
 
 
 @login_required
-@user_passes_test(is_examiner)
+@user_passes_test(is_admin)
 def review_course_access(request, request_id, decision):
     access_request = get_object_or_404(CourseAccessRequest, id=request_id, status='pending')
 
@@ -613,7 +620,7 @@ def review_course_access(request, request_id, decision):
     else:
         messages.error(request, "Invalid access decision.")
 
-    return redirect('/examiners/dashboard/#access')
+    return redirect('/dashboard/#access')
 
 
 @login_required
@@ -629,3 +636,14 @@ def create_teacher(request):
     else:
         form = TeacherCreateForm()
     return render(request, 'examiners/create_teacher.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_examiner)
+def delete_subject(request, subject_id):
+    subject = get_object_or_404(Course, id=subject_id)
+    title = subject.title
+    subject.delete()
+    messages.success(request, f"Subject '{title}' deleted successfully.")
+    return redirect('/examiners/dashboard/#subjects')
+

@@ -147,7 +147,7 @@
                     {% if user.is_superuser %}
                         <span class="badge bg-danger px-3 py-2 rounded-pill">System Admin</span>
                     {% elif user.is_examiner %}
-                        <span class="badge bg-primary px-3 py-2 rounded-pill">Master Examiner</span>
+                        <span class="badge bg-primary px-3 py-2 rounded-pill">Master Conductor</span>
                     {% elif user.is_teacher %}
                         <span class="badge bg-info text-white px-3 py-2 rounded-pill">Exam Conductor</span>
                     {% else %}
@@ -168,7 +168,7 @@
                         </a>
                     {% elif user.is_examiner %}
                         <a href="{% url 'examiner_dashboard' %}" class="btn btn-primary btn-action">
-                            <i class="fa-solid fa-award me-2"></i> Examiner Dash
+                            <i class="fa-solid fa-award me-2"></i> Conductor Dash
                         </a>
                     {% elif user.is_teacher %}
                         <a href="{% url 'teacher_dashboard' %}" class="btn btn-info text-white btn-action">
@@ -180,7 +180,7 @@
         </div>
 
         <div class="col-lg-8">
-            <h5 class="fw-bold mb-4 ps-2 border-start border-4 border-primary">Registered Exam Subjects</h5>
+            <h5 class="fw-bold mb-4 ps-2 border-start border-4 border-primary">Enrolled Courses</h5>
 
             {% if enrolled_courses %}
                 <div class="d-flex flex-column gap-3">
@@ -248,8 +248,8 @@
                     <div class="mb-3">
                         <i class="fa-solid fa-file-invoice text-muted display-4 opacity-25"></i>
                     </div>
-                    <h5 class="fw-bold text-dark">No Registered Exams</h5>
-                    <p class="text-muted mb-4">You are not currently enrolled in any exam subjects.</p>
+                    <h5 class="fw-bold text-dark">No Enrolled Courses</h5>
+                    <p class="text-muted mb-4">You are not currently enrolled in any courses.</p>
                 </div>
             {% endif %}
 

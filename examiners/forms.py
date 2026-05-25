@@ -47,13 +47,12 @@ class ExaminerSignupForm(forms.ModelForm):
             counter += 1
         return username
 class ExaminerStudentCreateForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, label="Password")
     conductor = forms.ModelChoiceField(queryset=User.objects.none(), label="Assign to Conductor")
-    course = forms.ModelChoiceField(queryset=Course.objects.all(), label="Exam Subject")
+    course = forms.ModelChoiceField(queryset=Course.objects.all(), label="Subject")
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'first_name', 'last_name']
+        fields = ['email', 'first_name', 'last_name']
 
     def __init__(self, *args, **kwargs):
         examiner = kwargs.pop('examiner', None)
@@ -64,6 +63,7 @@ class ExaminerStudentCreateForm(forms.ModelForm):
                 examiner=examiner
             ).values_list('teacher_id', flat=True)
             self.fields['conductor'].queryset = User.objects.filter(id__in=managed_teacher_ids)
+            self.fields['course'].queryset = Course.objects.filter(created_by=examiner).order_by('-created_at')
         
         for field in self.fields:
             self.fields[field].widget.attrs.update({
@@ -79,7 +79,7 @@ class ExaminerStudentCreateForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password'])
+        user.set_unusable_password()
         user.is_teacher = False
         user.is_examiner = False
         user.is_student = True

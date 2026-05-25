@@ -35,7 +35,7 @@ ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = [
     'https://nonperceptional-arcuately-kaylin.ngrok-free.dev',
 ]
-# Application definition
+# Application definition - Reload trigger
 
 INSTALLED_APPS = [
     'django.contrib.admin',

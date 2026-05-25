@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-dark: #2c3e50;
+        --bg-cream: #f3f4f6;
+    }
+
+    .success-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 30px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+        transition: transform 0.3s;
+    }
+
+    .success-icon-box {
+        background: rgba(46, 204, 113, 0.1);
+        border: 1px solid rgba(46, 204, 113, 0.25);
+        color: #2ecc71;
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 2.5rem;
+    }
+
+    .btn-custom {
+        background-color: var(--primary-purple);
+        color: white;
+        transition: all 0.3s;
+    }
+    .btn-custom:hover {
+        background-color: #732d91;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="py-5 d-flex align-items-center" style="background-color: var(--bg-cream); min-height: 85vh;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 text-center">
+                
+                <div class="success-card p-5">
+                    
+                    <div class="success-icon-box mx-auto mb-4">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill mb-3 fw-bold text-uppercase">
+                        <i class="fa-solid fa-unlock me-1"></i> Course Unlocked
+                    </span>
+
+                    <h2 class="fw-bold mb-3" style="color: var(--primary-dark);">Successfully Enrolled!</h2>
+                    
+                    <p class="lead text-muted mb-4">
+                        Your payment was successful and access to <span class="fw-bold text-dark">{{ course.title }}</span> has been fully activated.
+                    </p>
+
+                    <div class="alert alert-warning border border-warning border-opacity-25 rounded-4 p-4 text-start mb-5 shadow-sm d-flex gap-3 align-items-start">
+                        <i class="fa-solid fa-circle-info fa-xl mt-1 text-warning"></i>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Lessons Coming Soon</h6>
+                            <p class="small text-muted mb-0">
+                                The instructor has not uploaded any videos or study materials for this course yet. Once lessons are added, they will appear in your learning feed automatically!
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                        <a href="{% url 'course_list' %}" class="btn btn-custom rounded-pill px-5 py-3 fw-bold shadow-sm">
+                            <i class="fa-solid fa-graduation-cap me-2"></i> Explore Courses
+                        </a>
+                        <a href="{% url 'profile' %}" class="btn btn-light rounded-pill px-5 py-3 fw-bold border">
+                            <i class="fa-regular fa-user me-2"></i> View My Profile
+                        </a>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

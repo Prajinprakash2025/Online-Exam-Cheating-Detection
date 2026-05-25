@@ -28,7 +28,25 @@
                 <i class="fa-solid fa-triangle-exclamation me-2"></i> AI Proctoring Active: Do not leave the camera frame or switch tabs.
             </div>
 
-            <form id="quizForm" method="POST" action="">
+            {% if exam_not_started %}
+                <div id="startPanel" class="card mb-4 shadow-sm border-0 rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-2" style="color: var(--primary-dark);">Start Camera First</h5>
+                        <p id="cameraStatus" class="text-muted fw-semibold mb-4">
+                            Allow camera permission. The questions and timer will start only after your camera is ready.
+                        </p>
+                        <form method="POST" action="">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="start_assessment">
+                            <button id="startAssessmentButton" type="submit" class="btn rounded-pill px-4 py-3 fw-bold text-white" style="background-color: var(--primary-purple);" disabled>
+                                Start Assessment
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <form id="quizForm" method="POST" action="" {% if exam_not_started %}class="d-none"{% endif %}>
                 {% csrf_token %}
                 {% for q in questions %}
                     <div class="card mb-4 shadow-sm border-0 rounded-4">
@@ -99,7 +117,7 @@
                 <div class="card-body p-4 text-center bg-light rounded-4">
                     
                     <h6 class="fw-bold text-uppercase text-muted ls-1 mb-2">Time Remaining</h6>
-                    <h1 id="timerDisplay" class="text-danger fw-bolder display-4 mb-4" style="font-variant-numeric: tabular-nums;">--:--</h1>
+                    <h1 id="timerDisplay" class="text-danger fw-bolder display-4 mb-4" style="font-variant-numeric: tabular-nums;">{% if exam_not_started %}Ready{% else %}--:--{% endif %}</h1>
                     
                     <hr class="mb-4 opacity-25">
                     
@@ -130,10 +148,17 @@
     // 1. COUNTDOWN TIMER LOGIC
     // ==========================================
     let timeLeft = {{ remaining_time }};
+    const assessmentStarted = {% if exam_not_started %}false{% else %}true{% endif %};
     const timerDisplay = document.getElementById('timerDisplay');
     const quizForm = document.getElementById('quizForm');
+    const startAssessmentButton = document.getElementById('startAssessmentButton');
+    const cameraStatus = document.getElementById('cameraStatus');
 
     function updateTimer() {
+        if (!assessmentStarted) {
+            timerDisplay.innerText = "Ready";
+            return;
+        }
         if (timeLeft <= 0) {
             timerDisplay.innerText = "00:00";
             alert("Time is up! Submitting your exam automatically...");
@@ -154,18 +179,36 @@
     const videoElement = document.getElementById('webcam');
     let proctoringTimer = null;
     let lastFrameSentAt = 0;
+    const lastEventSentAt = {};
 
     navigator.mediaDevices.getUserMedia({ video: true })
         .then(function(stream) {
             videoElement.srcObject = stream;
             videoElement.onloadedmetadata = function() {
-                captureAndSendFrame();
+                if (startAssessmentButton) {
+                    startAssessmentButton.disabled = false;
+                }
+                if (cameraStatus) {
+                    cameraStatus.innerText = "Camera is ready. Click Start Assessment to show questions and begin the timer.";
+                    cameraStatus.classList.remove('text-muted');
+                    cameraStatus.classList.add('text-success');
+                }
+                if (assessmentStarted) {
+                    captureAndSendFrame();
+                }
             };
         })
         .catch(function(err) {
             alert("Webcam access is required for this Proctored Exam! Please allow camera permissions.");
             console.error("Camera error:", err);
-            reportProctoringEvent('camera_stalled');
+            if (cameraStatus) {
+                cameraStatus.innerText = "Camera permission is blocked. Please allow camera access to start.";
+                cameraStatus.classList.remove('text-muted');
+                cameraStatus.classList.add('text-danger');
+            }
+            if (assessmentStarted) {
+                reportProctoringEvent('camera_stalled');
+            }
         });
 
     // ==========================================
@@ -191,6 +234,9 @@
     }
 
     function postProctoringPayload(payload) {
+        if (!assessmentStarted) {
+            return Promise.resolve({ skipped: true });
+        }
         return fetch(`/quiz/session/{{ session.id }}/process_frame/`, {
             method: 'POST',
             headers: {
@@ -209,13 +255,18 @@
         .catch(error => console.error("Error sending proctoring data:", error));
     }
 
-    function reportProctoringEvent(eventName) {
-        postProctoringPayload({ event: eventName });
+    function reportProctoringEvent(eventName, minGapMs = 3000) {
+        const now = Date.now();
+        if (lastEventSentAt[eventName] && now - lastEventSentAt[eventName] < minGapMs) {
+            return Promise.resolve({ skipped: true });
+        }
+        lastEventSentAt[eventName] = now;
+        return postProctoringPayload({ event: eventName });
     }
 
     function captureAndSendFrame() {
         if (!videoElement.videoWidth) {
-            reportProctoringEvent('camera_stalled');
+            reportProctoringEvent('camera_stalled', 8000);
             return;
         }
 
@@ -231,12 +282,15 @@
     }
 
     videoElement.addEventListener('play', () => {
-        if (!proctoringTimer) {
+        if (assessmentStarted && !proctoringTimer) {
             proctoringTimer = setInterval(captureAndSendFrame, captureInterval);
         }
     });
 
     document.addEventListener('visibilitychange', function() {
+        if (!assessmentStarted) {
+            return;
+        }
         if (document.hidden) {
             reportProctoringEvent('tab_switch');
         } else {
@@ -245,12 +299,23 @@
     });
 
     window.addEventListener('blur', function() {
-        reportProctoringEvent('window_blur');
+        if (!assessmentStarted) {
+            return;
+        }
+        setTimeout(function() {
+            if (document.hidden) {
+                return;
+            }
+            reportProctoringEvent('window_blur', 5000);
+        }, 750);
     });
 
     setInterval(function() {
+        if (!assessmentStarted) {
+            return;
+        }
         if (Date.now() - lastFrameSentAt > 10000) {
-            reportProctoringEvent('camera_stalled');
+            reportProctoringEvent('camera_stalled', 8000);
         }
     }, 10000);
 </script>

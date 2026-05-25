@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --bg-cream: #f3f4f6;
+    }
+
+    .policy-hero {
+        background-color: var(--bg-cream);
+        padding: 5rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .policy-card {
+        border-radius: 24px;
+        background: white;
+        border: 1px solid #eef2f6;
+    }
+
+    .section-title {
+        color: var(--primary-dark);
+        border-bottom: 2px solid rgba(142, 68, 173, 0.1);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.25rem;
+        font-weight: 700;
+    }
+</style>
+
+<div class="policy-hero mb-5">
+    <div class="container text-center">
+        <span class="badge bg-white text-dark shadow-sm rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase ls-1">
+            <i class="fa-solid fa-lock text-primary me-2"></i> Data Privacy
+        </span>
+        <h1 class="fw-bold display-4 mb-3 text-dark">Privacy Policy</h1>
+        <p class="text-muted lead mb-0 mx-auto" style="max-width: 600px;">
+            Effective Date: May 25, 2026. How we manage, collect, and protect your information.
+        </p>
+    </div>
+</div>
+
+<div class="container py-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="policy-card p-4 p-md-5 shadow-sm">
+                
+                <h4 class="section-title"><i class="fa-solid fa-circle-info text-primary me-2"></i> 1. Introduction</h4>
+                <p class="text-muted" style="line-height: 1.8;">
+                    Welcome to ExamGate. We value the privacy of our candidates, examiners, and teachers. This Privacy Policy details how we handle account credentials, exam submissions, and behavior tracking data collected through our AI-proctored assessment portal.
+                </p>
+
+                <h4 class="section-title mt-5"><i class="fa-solid fa-video text-primary me-2"></i> 2. AI Proctoring & Webcam Snapshot Collection</h4>
+                <p class="text-muted" style="line-height: 1.8;">
+                    Our platform incorporates behavior-tracking tools to preserve exam integrity. Please review the following key policies regarding webcam feeds:
+                </p>
+                <ul class="text-muted mb-4" style="line-height: 1.8;">
+                    <li><strong>Local Browser Processing:</strong> The camera stream is analyzed directly in the candidate's browser using lightweight clientside scripts. Raw, real-time video feeds are *never* transmitted to our databases or saved on our servers.</li>
+                    <li><strong>Behavior Flagging & Snapshot Capture:</strong> If clientside algorithms identify anomalous events (e.g. browser tab switches, camera stalls, or face absence), the system captures a low-resolution snapshot of that specific event.</li>
+                    <li><strong>Access Restrictions:</strong> Captured snapshots are saved securely on the server and are strictly readable *only* by the authorized Examiner/Conductor or Teacher managing that specific subject. They are automatically deleted after the grading cycle completes.</li>
+                </ul>
+
+                <h4 class="section-title mt-5"><i class="fa-solid fa-database text-primary me-2"></i> 3. Information We Collect</h4>
+                <p class="text-muted" style="line-height: 1.8;">
+                    We collect personal information necessary for authentication, exam routing, and scoring:
+                </p>
+                <ul class="text-muted mb-4" style="line-height: 1.8;">
+                    <li><strong>Account Details:</strong> Usernames, first and last names, email addresses, and roles (Conductor, Teacher, Student).</li>
+                    <li><strong>Exam Submissions:</strong> Multiple choice choices, written answers, submission dates, durations, and proctoring log records (risk scores and flags).</li>
+                    <li><strong>Profile Picture:</strong> Optional images uploaded to help teachers identify candidates manually.</li>
+                </ul>
+
+                <h4 class="section-title mt-5"><i class="fa-solid fa-user-shield text-primary me-2"></i> 4. Data Security</h4>
+                <p class="text-muted" style="line-height: 1.8;">
+                    We implement industry-standard administrative and technological safeguards. All databases containing scores and proctoring snapshots are encrypted in transit and at rest. Strict role-based authorizations restrict examiners from accessing data from other examiners' groups.
+                </p>
+
+                <h4 class="section-title mt-5"><i class="fa-solid fa-scale-balanced text-primary me-2"></i> 5. Your Rights</h4>
+                <p class="text-muted" style="line-height: 1.8;">
+                    Under applicable data protection laws, candidates have the right to request access to their submitted exam answers and any associated behavior flags. To request an audit of your logs or delete your account records, please contact support or your managing Conductor directly.
+                </p>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -11,7 +11,6 @@ urlpatterns = [
     path('student/create/', views.create_student, name='teacher_create_student'),
     path('proctoring/', views.teacher_proctoring_dashboard, name='teacher_proctoring_dashboard'),
     path('proctoring/review/<int:session_id>/', views.teacher_review_exam, name='teacher_review_exam'),
-    path('subject/delete/<int:course_id>/', views.delete_teacher_subject, name='delete_teacher_subject'),
     # Exam Paper Routes
     path('exam/delete/<int:exam_id>/', views.delete_exam, name='delete_exam'),
     path('exam/<int:exam_id>/questions/', views.teacher_exam_questions, name='teacher_exam_questions'),

@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --purple-light: #9b59b6;
+        --purple-soft: #f4ecf7;
+        --text-dark: #2c3e50;
+        --bg-cream: #f4f6f9;
+    }
+
+    body {
+        background-color: var(--bg-cream);
+    }
+
+    .checkout-container {
+        max-width: 1000px;
+        margin: 50px auto;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 24px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Premium Credit Card Styling */
+    .credit-card-mockup {
+        background: linear-gradient(135deg, #8e44ad 0%, #3498db 100%);
+        border-radius: 20px;
+        color: white;
+        padding: 30px;
+        height: 220px;
+        display: flex;
+        flex-column: column;
+        justify-content: space-between;
+        box-shadow: 0 15px 25px rgba(142, 68, 173, 0.3);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .credit-card-mockup::before {
+        content: '';
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        top: -50px;
+        right: -50px;
+    }
+
+    .card-chip {
+        width: 45px;
+        height: 35px;
+        background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+        border-radius: 6px;
+        box-shadow: inset 1px 1px 2px rgba(255,255,255,0.5);
+    }
+
+    .card-number {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 1.45rem;
+        letter-spacing: 3px;
+        margin: 20px 0;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .card-holder-label, .card-expiry-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.7);
+        letter-spacing: 1px;
+        margin-bottom: 2px;
+    }
+
+    .card-holder-name, .card-expiry-val {
+        font-size: 1rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+
+    .input-premium {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 12px 18px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        background-color: #f8f9fa;
+    }
+
+    .input-premium:focus {
+        border-color: var(--primary-purple);
+        background-color: white;
+        box-shadow: 0 0 0 4px rgba(142, 68, 173, 0.1);
+        outline: none;
+    }
+
+    .btn-pay {
+        background-color: var(--primary-purple);
+        color: white;
+        border-radius: 50px;
+        padding: 15px 30px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        transition: all 0.3s;
+        border: none;
+    }
+
+    .btn-pay:hover {
+        background-color: #732d91;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(142, 68, 173, 0.2);
+    }
+
+    .course-summary-box {
+        background-color: var(--purple-soft);
+        border-radius: 18px;
+        padding: 24px;
+        border: 1px dashed rgba(142, 68, 173, 0.2);
+    }
+</style>
+
+<div class="container checkout-container">
+    <div class="row g-5">
+        <!-- Left Column: Premium Checkout Form -->
+        <div class="col-lg-7">
+            <div class="card glass-card p-4 p-md-5">
+                <h3 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-lock text-success me-2"></i>Secure Checkout</h3>
+                <p class="text-muted mb-5">Please fill in your payment details to complete the purchase and unlock the course.</p>
+                
+                <form method="POST" id="checkout-form" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Form Fields -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Cardholder Name</label>
+                        <input type="text" id="input-card-name" name="card_name" class="form-control input-premium" placeholder="e.g. JOHN DOE" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Card Number</label>
+                        <div class="position-relative">
+                            <input type="text" id="input-card-number" name="card_number" class="form-control input-premium ps-5" placeholder="1111 2222 3333 4444" maxlength="19" required>
+                            <span class="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
+                                <i class="fa-solid fa-credit-card"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-bold text-dark">Expiration Date</label>
+                            <input type="text" id="input-card-expiry" name="card_expiry" class="form-control input-premium" placeholder="MM/YY" maxlength="5" required>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-bold text-dark">CVV / CVC</label>
+                            <input type="password" id="input-card-cvv" name="card_cvv" class="form-control input-premium" placeholder="***" maxlength="4" required>
+                        </div>
+                    </div>
+
+                    <hr class="my-5 border-light">
+
+                    <button type="submit" class="btn btn-pay w-100 py-3 shadow">
+                        <i class="fa-solid fa-shield-halved me-2"></i> Complete Mock Payment
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Visual Mockup and Order Summary -->
+        <div class="col-lg-5">
+            <!-- Credit Card Mockup -->
+            <div class="credit-card-mockup mb-5">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="card-chip"></div>
+                    <i class="fa-brands fa-cc-visa fs-1"></i>
+                </div>
+                <div class="card-number" id="mock-number">•••• •••• •••• ••••</div>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="card-holder-label">Card Holder</div>
+                        <div class="card-holder-name" id="mock-name">YOUR NAME HERE</div>
+                    </div>
+                    <div>
+                        <div class="card-expiry-label">Expires</div>
+                        <div class="card-expiry-val" id="mock-expiry">MM/YY</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="card glass-card p-4">
+                <h5 class="fw-bold mb-4 text-dark">Order Summary</h5>
+                
+                <div class="course-summary-box mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="flex-shrink-0 bg-white rounded-3 p-2 border shadow-sm" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                            {% if course.thumbnail %}
+                                <img src="{{ course.thumbnail.url }}" class="w-100 h-100 rounded-2" style="object-fit: cover;">
+                            {% else %}
+                                <i class="fa-solid fa-graduation-cap text-primary fs-3"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-1 text-dark">{{ course.title }}</h6>
+                            <small class="text-muted">{{ course.videos.count }} Lessons & Quizzes</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mb-3 text-muted">
+                    <span>Course Subtotal:</span>
+                    <span>₹{{ course.price }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 text-muted">
+                    <span>Processing Fee:</span>
+                    <span class="text-success">FREE</span>
+                </div>
+                <hr class="border-light my-3">
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="fw-bold text-dark fs-5">Total Due:</span>
+                    <span class="fw-bold fs-4" style="color: var(--primary-purple);">₹{{ course.price }}</span>
+                </div>
+
+                <div class="text-center bg-light rounded-3 p-3 border">
+                    <small class="text-muted"><i class="fa-solid fa-circle-info me-1"></i> This is a secure mock payment demonstration. No real funds will be charged.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Live update credit card mockup as user types
+    const inputName = document.getElementById('input-card-name');
+    const inputNumber = document.getElementById('input-card-number');
+    const inputExpiry = document.getElementById('input-card-expiry');
+
+    const mockName = document.getElementById('mock-name');
+    const mockNumber = document.getElementById('mock-number');
+    const mockExpiry = document.getElementById('mock-expiry');
+
+    inputName.addEventListener('input', (e) => {
+        mockName.textContent = e.target.value.toUpperCase() || 'YOUR NAME HERE';
+    });
+
+    inputNumber.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+        let formatted = '';
+        for (let i = 0; i < value.length; i++) {
+            if (i > 0 && i % 4 === 0) {
+                formatted += ' ';
+            }
+            formatted += value[i];
+        }
+        e.target.value = formatted.substring(0, 19);
+        mockNumber.textContent = e.target.value || '•••• •••• •••• ••••';
+    });
+
+    inputExpiry.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+        if (value.length > 2) {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4);
+        }
+        e.target.value = value.substring(0, 5);
+        mockExpiry.textContent = e.target.value || 'MM/YY';
+    });
+</script>
+{% endblock %}

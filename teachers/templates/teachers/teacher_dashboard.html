@@ -45,7 +45,7 @@
     /* Sidebar Styling */
     .dashboard-container {
         display: flex;
-        min-height: calc(100vh - 70px);
+        min-height: calc(100vh - 76px);
     }
 
     .dashboard-sidebar {
@@ -57,8 +57,9 @@
         display: flex;
         flex-direction: column;
         position: sticky;
-        top: 0;
-        height: calc(100vh - 70px);
+        top: 76px;
+        height: calc(100vh - 76px);
+        overflow-y: auto;
     }
 
     .sidebar-link {
@@ -181,7 +182,7 @@
                 <i class="fa-solid fa-user-graduate"></i> My Students
             </a>
             <a onclick="switchSection('subjects', this)" class="sidebar-link">
-                <i class="fa-solid fa-book-bookmark"></i> My Subjects
+                <i class="fa-solid fa-book-bookmark"></i> Subjects
             </a>
             <a onclick="switchSection('exams', this)" class="sidebar-link">
                 <i class="fa-solid fa-file-signature"></i> Manage Exams
@@ -210,7 +211,7 @@
         <div class="d-flex justify-content-between align-items-center mb-5">
             <div>
                 <h3 class="fw-bold text-dark mb-1">Hello, Teacher</h3>
-                <p class="text-muted mb-0">Manage your course students, curate exams, and evaluate performance.</p>
+                <p class="text-muted mb-0">Manage your subject students, curate exams, and evaluate performance.</p>
             </div>
             <div class="bg-white p-2 rounded-4 shadow-sm border d-flex align-items-center gap-3">
                 <div class="text-end px-2">
@@ -419,32 +420,34 @@
         <!-- Section: Subjects -->
         <div id="section-subjects" class="dashboard-section">
             <div class="glass-card">
-                <div class="p-4 border-bottom">
-                    <h5 class="mb-0 fw-bold">My Expertise Areas</h5>
-                </div>
-                <div class="row g-4 p-4">
-                    {% for subject in all_subjects %}
-                    <div class="col-md-4">
-                        <div class="card h-100 rounded-4 border-0 shadow-sm overflow-hidden">
-                            {% if subject.thumbnail %}
-                            <img src="{{ subject.thumbnail.url }}" class="card-img-top" style="height: 140px; object-fit: cover;">
-                            {% endif %}
-                            <div class="card-body">
-                                <h6 class="fw-bold">{{ subject.title }}</h6>
-                                <p class="small text-muted mb-3">{{ subject.description|truncatechars:80 }}</p>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-teal rounded-pill px-3 flex-grow-1"
-                                            onclick="openEditSubjectModal('{{ subject.id }}', '{{ subject.title }}', '{{ subject.description }}')">
-                                        <i class="fa-solid fa-edit me-1"></i> Edit
-                                    </button>
-                                    <a href="{% url 'delete_teacher_subject' subject.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Delete this subject?')">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+                    <div>
+                        <h5 class="mb-0 fw-bold">Subject Library</h5>
+                        <p class="text-muted smaller mb-0">Authorized exam subjects assigned to your portal.</p>
                     </div>
-                    {% endfor %}
+                    <span class="badge bg-light text-muted border rounded-pill px-3 py-2 fw-bold"><i class="fa-solid fa-lock me-1"></i> Admin Managed</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Description</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subject in all_subjects %}
+                            <tr>
+                                <td><span class="fw-bold">{{ subject.title }}</span></td>
+                                <td class="text-muted small">{{ subject.description|default:"--" }}</td>
+                                <td class="text-muted small">{{ subject.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center py-5 text-muted">No subjects created yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -515,7 +518,8 @@
 <div class="modal fade" id="addStudentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Register New Student</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -532,10 +536,6 @@
                         <div class="col-12">
                             <label class="form-label small fw-bold">Email Address</label>
                             <input type="email" name="email" class="form-control" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Password</label>
-                            <input type="password" name="password" class="form-control" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold">Assign to Subject</label>
@@ -557,7 +557,8 @@
 <div class="modal fade" id="editStudentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Edit Student Details</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -586,7 +587,8 @@
 <div class="modal fade" id="createExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Draft New Exam Paper</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -628,7 +630,8 @@
 <div class="modal fade" id="editExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Update Exam Details</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -714,7 +717,8 @@
 <div class="modal fade" id="assignExamToStudentsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="text-center mb-4">
                     <div class="bg-purple bg-opacity-10 p-3 rounded-circle d-inline-block mb-3" style="color: var(--primary-purple)">
                         <i class="fa-solid fa-share-nodes fa-2xl"></i>
@@ -754,7 +758,8 @@
 <div class="modal fade" id="singleStudentAssignExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="text-center mb-4">
                     <div class="bg-purple bg-opacity-10 p-3 rounded-circle d-inline-block mb-3" style="color: var(--primary-purple)">
                         <i class="fa-solid fa-paper-plane fa-2xl"></i>
@@ -788,7 +793,8 @@
 <div class="modal fade" id="bulkAssignExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="text-center mb-4">
                     <div class="bg-purple bg-opacity-10 p-3 rounded-circle d-inline-block mb-3" style="color: var(--primary-purple)">
                         <i class="fa-solid fa-users-gear fa-2xl"></i>
@@ -818,34 +824,6 @@
     </div>
 </div>
 
-<!-- Modal: Edit Subject -->
-<div class="modal fade" id="editSubjectModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
-                <h5 class="fw-bold mb-4">Edit Subject Details</h5>
-                <form method="POST" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="edit_subject">
-                    <input type="hidden" name="subject_id" id="edit_subject_id">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Subject Title</label>
-                        <input type="text" name="title" id="edit_subject_title" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Description</label>
-                        <textarea name="description" id="edit_subject_desc" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Thumbnail (Optional)</label>
-                        <input type="file" name="thumbnail" class="form-control">
-                    </div>
-                    <button type="submit" class="btn btn-teal w-100 py-3 text-white fw-bold rounded-3">UPDATE SUBJECT</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
     // Console scripts for Assignment functionality
@@ -861,12 +839,6 @@
         new bootstrap.Modal(document.getElementById('singleStudentAssignExamModal')).show();
     }
 
-    function openEditSubjectModal(id, title, desc) {
-        document.getElementById('edit_subject_id').value = id;
-        document.getElementById('edit_subject_title').value = title;
-        document.getElementById('edit_subject_desc').value = desc;
-        new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
-    }
 
     // Selection Logic for Bulk Exam Assignment
     const selectAll = document.getElementById('selectAllStudents');

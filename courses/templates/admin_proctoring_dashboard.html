@@ -66,9 +66,11 @@
                             <td class="ps-4 fw-semibold text-dark">
                                 <i class="fa-solid fa-user text-muted me-2"></i>{{ session.student.username }}
                             </td>
-                            <td>{{ session.video.title }}</td>
+                            <td>{% if session.video %}{{ session.video.title }}{% elif session.exam %}{{ session.exam.title }}{% else %}Unknown Assessment{% endif %}</td>
                             <td>
-                                {% if session.status == 'flagged' %}
+                                {% if session.status == 'ongoing' %}
+                                    <span class="status-pill bg-info text-white">Live</span>
+                                {% elif session.status == 'flagged' %}
                                     <span class="status-pill bg-warning text-dark">Flagged</span>
                                 {% elif session.status == 'disqualified' %}
                                     <span class="status-pill bg-danger text-white">Disqualified</span>
@@ -86,7 +88,7 @@
                         {% empty %}
                         <tr>
                             <td colspan="5" class="text-center py-5 text-muted">
-                                No completed proctored exams yet.
+                                No proctored exams yet.
                             </td>
                         </tr>
                         {% endfor %}

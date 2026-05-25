@@ -6,23 +6,153 @@ from django.db.models import Count, Q
 from courses.models import Course, Video, Quiz, QuizSession, Exam, ExamQuestion, ExamAssignment, StudentAnswer
 from courses.forms import QuizForm
 from courses.proctoring import calculate_risk_report
-from examiners.forms import SubjectForm
 from .models import TeacherStudentAssignment
 from .forms import StudentCreateForm
 
+import random
+from datetime import timedelta
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+TEACHER_LOGIN_OTP_MINUTES = 10
+
+
+def _clear_teacher_login_otp(request):
+    for key in (
+        'teacher_login_user_id',
+        'teacher_login_email',
+        'teacher_login_otp',
+        'teacher_login_otp_expires_at',
+    ):
+        request.session.pop(key, None)
+
+
+def _print_teacher_otp(purpose, email, otp):
+    print("\n" + "=" * 64)
+    print(f"ExamGate {purpose} OTP for {email}: {otp}")
+    print("=" * 64 + "\n")
+
+
+def _send_teacher_otp(email, subject, message, otp, purpose):
+    _print_teacher_otp(purpose, email, otp)
+
+    backend = getattr(settings, 'EMAIL_BACKEND', '')
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
+    can_send_email = bool(from_email) or 'console' in backend or 'locmem' in backend
+
+    if not can_send_email:
+        return
+
+    try:
+        send_mail(
+            subject,
+            message,
+            from_email,
+            [email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        if not settings.DEBUG:
+            raise
+        print(f"ExamGate OTP email delivery skipped in DEBUG after error: {exc}")
+
+
+def _teacher_otp_context(request):
+    expires_at = request.session.get('teacher_login_otp_expires_at')
+    otp_email = request.session.get('teacher_login_email')
+
+    if not expires_at or not otp_email:
+        return {'otp_sent': False}
+
+    try:
+        expires_at = float(expires_at)
+    except (TypeError, ValueError):
+        _clear_teacher_login_otp(request)
+        return {'otp_sent': False}
+
+    if timezone.now().timestamp() > expires_at:
+        _clear_teacher_login_otp(request)
+        return {'otp_sent': False}
+
+    return {'otp_sent': True, 'otp_email': otp_email}
+
 
 def teacher_login(request):
+    if request.GET.get('reset') == '1':
+        _clear_teacher_login_otp(request)
+        return redirect('teacher_login')
+
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        # We use email as the username field in our custom User model
-        user = authenticate(request, username=email, password=password)
-        if user and user.is_teacher:
+        action = request.POST.get('action')
+
+        if action == 'verify_otp':
+            entered_otp = (request.POST.get('otp') or '').strip()
+            saved_otp = str(request.session.get('teacher_login_otp') or '')
+            user_id = request.session.get('teacher_login_user_id')
+            expires_at = request.session.get('teacher_login_otp_expires_at')
+
+            if not user_id or not saved_otp or not expires_at:
+                messages.error(request, "Please request a fresh login OTP.")
+                return redirect('teacher_login')
+
+            try:
+                expires_at = float(expires_at)
+            except (TypeError, ValueError):
+                _clear_teacher_login_otp(request)
+                messages.error(request, "Please request a fresh login OTP.")
+                return redirect('teacher_login')
+
+            if timezone.now().timestamp() > expires_at:
+                _clear_teacher_login_otp(request)
+                messages.error(request, "Your login OTP expired. Please request a new one.")
+                return redirect('teacher_login')
+
+            if entered_otp != saved_otp:
+                messages.error(request, "Invalid OTP. Please try again.")
+                return render(request, 'teachers/teacher_login.html', _teacher_otp_context(request))
+
+            user = get_object_or_404(User, id=user_id, is_teacher=True)
             login(request, user)
+            _clear_teacher_login_otp(request)
             messages.success(request, f"Welcome back, {user.first_name or user.username}!")
             return redirect('teacher_dashboard')
-        messages.error(request, "Invalid conductor credentials. Please check your email and password.")
-    return render(request, 'teachers/teacher_login.html')
+
+        email = (request.POST.get('email') or '').strip().lower()
+        user = User.objects.filter(email__iexact=email, is_teacher=True).first()
+
+        if not user:
+            messages.error(request, "No teacher account was found for that email.")
+            return render(request, 'teachers/teacher_login.html', {'otp_sent': False})
+
+        otp = f"{random.randint(100000, 999999)}"
+        subject = 'Your ExamGate Teacher Login OTP'
+        message = (
+            f"Hello {user.first_name or user.username},\n\n"
+            f"Your ExamGate teacher login OTP is: {otp}\n\n"
+            f"This code is valid for {TEACHER_LOGIN_OTP_MINUTES} minutes."
+        )
+
+        try:
+            _send_teacher_otp(user.email, subject, message, otp, 'teacher login')
+        except Exception as exc:
+            messages.error(request, f"Could not send OTP email: {exc}")
+            return render(request, 'teachers/teacher_login.html', {'otp_sent': False})
+
+        request.session['teacher_login_user_id'] = user.id
+        request.session['teacher_login_email'] = user.email
+        request.session['teacher_login_otp'] = otp
+        request.session['teacher_login_otp_expires_at'] = (
+            timezone.now() + timedelta(minutes=TEACHER_LOGIN_OTP_MINUTES)
+        ).timestamp()
+
+        messages.success(request, f"OTP generated for {user.email}. Check your terminal for the code.")
+        return render(request, 'teachers/teacher_login.html', _teacher_otp_context(request))
+
+    return render(request, 'teachers/teacher_login.html', _teacher_otp_context(request))
 
 
 @login_required
@@ -39,32 +169,13 @@ def is_teacher(user):
 @user_passes_test(is_teacher)
 def teacher_dashboard(request):
     teacher = request.user
-    # Handle Subject Registration
-    subject_form = SubjectForm()
     if request.method == 'POST':
         action = request.POST.get('action')
-        if action == 'register_subject':
-            subject_form = SubjectForm(request.POST, request.FILES)
-            if subject_form.is_valid():
-                subject = subject_form.save()
-                messages.success(request, f"New exam subject '{subject.title}' created.")
-                return redirect('/teachers/dashboard/#subjects')
-
-        elif action == 'edit_subject':
-            subject_id = request.POST.get('subject_id')
-            subject = get_object_or_404(Course, id=subject_id)
-            form = SubjectForm(request.POST, request.FILES, instance=subject)
-            if form.is_valid():
-                form.save()
-                messages.success(request, f"Subject '{subject.title}' updated successfully.")
-                return redirect('/teachers/dashboard/#subjects')
-
-        elif action == 'register_student':
+        if action == 'register_student':
             from courses.models import User
             first_name = request.POST.get('first_name')
             last_name = request.POST.get('last_name')
             email = request.POST.get('email')
-            password = request.POST.get('password')
             course_id = request.POST.get('course')
             
             # Check if user already exists
@@ -85,15 +196,17 @@ def teacher_dashboard(request):
                 else:
                     messages.error(request, "This email is associated with a non-student account.")
             else:
-                # Create new user
+                # Create new user without password (log in via OTP)
                 student = User.objects.create_user(
                     username=email, 
                     email=email, 
-                    password=password, 
                     first_name=first_name, 
                     last_name=last_name,
                     is_student=True
                 )
+                student.set_unusable_password()
+                student.save()
+                
                 if course_id:
                     course = get_object_or_404(Course, id=course_id)
                     TeacherStudentAssignment.objects.create(teacher=teacher, student=student, course=course)
@@ -173,8 +286,15 @@ def teacher_dashboard(request):
     assignments = TeacherStudentAssignment.objects.filter(teacher=teacher).select_related('student', 'course')
     course_ids = assignments.values_list('course_id', flat=True).distinct()
     
-    # All courses (or maybe just those relevant to teacher - user said "conductor can add the subject")
-    all_subjects = Course.objects.all().order_by('-created_at')
+    # Filter subjects created by the teacher's managing conductor/examiner OR admin-created ones
+    from examiners.models import ExaminerTeacherAssignment
+    examiner_assignment = ExaminerTeacherAssignment.objects.filter(teacher=teacher).first()
+    if examiner_assignment:
+        all_subjects = Course.objects.filter(
+            Q(created_by=examiner_assignment.examiner) | Q(created_by__isnull=True)
+        ).order_by('-created_at')
+    else:
+        all_subjects = Course.objects.filter(created_by__isnull=True).order_by('-created_at')
     
     videos = Video.objects.filter(course_id__in=course_ids).order_by('course__title', 'order')
     
@@ -232,20 +352,11 @@ def teacher_dashboard(request):
         'recent_sessions': recent_sessions,
         'review_count': review_count,
         'flagged_count': flagged_count,
-        'subject_form': subject_form,
+
         'exams': exams
     })
 
 
-@login_required
-@user_passes_test(is_teacher)
-def delete_teacher_subject(request, course_id):
-    # For now, allow teachers to delete subjects (as requested "conductor add section also add crud")
-    course = get_object_or_404(Course, id=course_id)
-    title = course.title
-    course.delete()
-    messages.success(request, f"Exam subject '{title}' deleted.")
-    return redirect('teacher_dashboard')
 @login_required
 @user_passes_test(is_teacher)
 def delete_student_assignment(request, student_id):
@@ -333,8 +444,19 @@ def assign_teacher(request):
 @user_passes_test(is_teacher)
 def create_student(request):
     from .forms import StudentCreateForm
+    from examiners.models import ExaminerTeacherAssignment
+    
+    examiner_assignment = ExaminerTeacherAssignment.objects.filter(teacher=request.user).first()
+    if examiner_assignment:
+        allowed_subjects = Course.objects.filter(
+            Q(created_by=examiner_assignment.examiner) | Q(created_by__isnull=True)
+        ).order_by('-created_at')
+    else:
+        allowed_subjects = Course.objects.filter(created_by__isnull=True).order_by('-created_at')
+        
     if request.method == 'POST':
         form = StudentCreateForm(request.POST)
+        form.fields['course'].queryset = allowed_subjects
         if form.is_valid():
             student = form.save()
             course = form.cleaned_data.get('course')
@@ -344,6 +466,7 @@ def create_student(request):
             return redirect('teacher_dashboard')
     else:
         form = StudentCreateForm()
+        form.fields['course'].queryset = allowed_subjects
     return render(request, 'teachers/create_student.html', {'form': form})
 
 
@@ -352,7 +475,7 @@ def create_student(request):
 def teacher_proctoring_dashboard(request):
     # Show only sessions for the students assigned to this teacher
     assigned_students = TeacherStudentAssignment.objects.filter(teacher=request.user).values_list('student', flat=True)
-    sessions = QuizSession.objects.filter(student__in=assigned_students).exclude(status='ongoing').prefetch_related('proctoring_logs').order_by('-start_time')
+    sessions = QuizSession.objects.filter(student__in=assigned_students).prefetch_related('proctoring_logs').order_by('-start_time')
     for session in sessions:
         session.risk_report = calculate_risk_report(session.proctoring_logs.all())
     return render(request, 'teachers/teacher_proctoring_dashboard.html', {'sessions': sessions})

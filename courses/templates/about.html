@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --bg-cream: #f3f4f6;
+    }
+
+    .about-hero {
+        background-color: var(--bg-cream);
+        padding: 5rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .about-card {
+        border-radius: 24px;
+        transition: all 0.3s ease;
+        background: white;
+        border: 1px solid #eef2f6;
+    }
+
+    .about-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(142, 68, 173, 0.08) !important;
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, var(--primary-purple) 0%, #3498db 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .about-img-wrapper {
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border: 4px solid white;
+        background: white;
+    }
+
+    .value-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(142, 68, 173, 0.08);
+        color: var(--primary-purple);
+    }
+</style>
+
+<div class="about-hero mb-5">
+    <div class="container text-center">
+        <span class="badge bg-white text-dark shadow-sm rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase ls-1">
+            <i class="fa-solid fa-graduation-cap text-primary me-2"></i> Our Mission
+        </span>
+        <h1 class="fw-bold display-4 mb-3 text-dark">About <span class="gradient-text">ExamGate</span></h1>
+        <p class="text-muted lead mb-0 mx-auto" style="max-width: 600px;">
+            Empowering certification authorities, universities, and students with secure, automated, and trustworthy assessment spaces.
+        </p>
+    </div>
+</div>
+
+<div class="container py-4">
+    <!-- SECTION 1: MISSION & TEAMWORK -->
+    <div class="row align-items-center g-5 mb-5 pb-5">
+        <div class="col-lg-6">
+            <h2 class="fw-bold mb-4">Empowering <span class="gradient-text">Integrity</span> in Online Education</h2>
+            <p class="text-muted mb-4" style="line-height: 1.8;">
+                ExamGate was built with a clear purpose: to bridge the gap between virtual learning and exam integrity. As academic programs transition online, verification becomes a primary requirement for institutions, professional associations, and students alike.
+            </p>
+            <p class="text-muted mb-4" style="line-height: 1.8;">
+                Our platform provides a distributed oversight system where **Examiners (Conductors)**, **Teachers**, and **Candidates** work in synchronization. We give instructors complete confidence that their assessments are completed under secure and verified guidelines.
+            </p>
+            
+            <div class="row g-4">
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="value-icon">
+                            <i class="fa-solid fa-people-group fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Collaboration</h6>
+                            <small class="text-muted">Uniting exam staff and students</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="value-icon">
+                            <i class="fa-solid fa-shield-halved fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Total Security</h6>
+                            <small class="text-muted">Proctored session verification</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="about-img-wrapper p-2">
+                {% load static %}
+                <img src="{% static 'images/about_mission.png' %}" alt="Collaborative Mission" class="img-fluid w-100 rounded-3">
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: INTEGITY & SECURE TESTING -->
+    <div class="row align-items-center g-5 mb-5 pb-5 flex-lg-row-reverse">
+        <div class="col-lg-6">
+            <h2 class="fw-bold mb-4">State-Of-The-Art <span class="gradient-text">Proctoring</span> Technology</h2>
+            <p class="text-muted mb-4" style="line-height: 1.8;">
+                At the core of ExamGate is our local face and environment-tracking behavior scanning. Using modern algorithms, candidates are monitored securely from their webcams. 
+            </p>
+            <p class="text-muted mb-4" style="line-height: 1.8;">
+                Instead of processing sensitive biometric video on remote databases, our system analyzes snapshots locally to preserve user privacy. Flagged actions (such as looking away, leaving the camera range, or external helper devices) are safely stored as snapshots for conductor-only audits.
+            </p>
+            
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="value-icon mt-1">
+                    <i class="fa-solid fa-lock fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">Privacy First Policy</h6>
+                    <p class="text-muted small mb-0">Local face detection logic keeps students' raw web feeds private while reporting key metrics only.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="about-img-wrapper p-2">
+                {% load static %}
+                <img src="{% static 'images/about_integrity.png' %}" alt="Testing Integrity" class="img-fluid w-100 rounded-3">
+            </div>
+        </div>
+    </div>
+
+    <!-- CALL TO ACTION -->
+    <div class="about-card p-5 text-center mb-5 shadow-sm border">
+        <h3 class="fw-bold mb-3">Ready to Experience Secure Testing?</h3>
+        <p class="text-muted mb-4 mx-auto" style="max-width: 500px;">
+            Join our proctored education ecosystem as a candidate or register your institution today.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'course_list' %}" class="btn btn-custom rounded-pill px-4 fw-bold">Explore Subjects</a>
+            <a href="{% url 'login' %}" class="btn btn-outline-dark rounded-pill px-4 fw-bold">Sign In Now</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

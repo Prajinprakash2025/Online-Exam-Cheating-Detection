@@ -45,7 +45,7 @@
     /* Sidebar Styling */
     .dashboard-container {
         display: flex;
-        min-height: calc(100vh - 70px);
+        min-height: calc(100vh - 76px);
     }
 
     .dashboard-sidebar {
@@ -57,8 +57,9 @@
         display: flex;
         flex-direction: column;
         position: sticky;
-        top: 0;
-        height: calc(100vh - 70px);
+        top: 76px;
+        height: calc(100vh - 76px);
+        overflow-y: auto;
     }
 
     .sidebar-link {
@@ -256,11 +257,9 @@
                 <i class="fa-solid fa-user-graduate"></i> Managed Candidates
             </a>
             <a onclick="switchSection('subjects', this)" class="sidebar-link">
-                <i class="fa-solid fa-book-bookmark"></i> Exam Subjects
+                <i class="fa-solid fa-book-bookmark"></i> Subjects
             </a>
-            <a onclick="switchSection('access', this)" class="sidebar-link">
-                <i class="fa-solid fa-unlock-keyhole"></i> Subject Access
-            </a>
+
             <a onclick="switchSection('exams', this)" class="sidebar-link">
                 <i class="fa-solid fa-file-signature"></i> Manage Exams
             </a>
@@ -513,58 +512,17 @@
             </div>
         </div>
 
-        <div id="section-access" class="dashboard-section">
-            <div class="glass-card">
-                <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
-                    <div>
-                        <h5 class="mb-0 fw-bold">Subject Access Requests</h5>
-                        <p class="text-muted smaller mb-0">Approve purchased/requested subjects before students can attend.</p>
-                    </div>
-                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2">{{ access_requests.count }} Pending</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-custom mb-0">
-                        <thead>
-                            <tr>
-                                <th>Student</th>
-                                <th>Subject</th>
-                                <th>Requested</th>
-                                <th class="text-end">Decision</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for access_request in access_requests %}
-                            <tr>
-                                <td>
-                                    <p class="mb-0 fw-bold">{{ access_request.student.get_full_name|default:access_request.student.username }}</p>
-                                    <small class="text-muted">{{ access_request.student.email }}</small>
-                                </td>
-                                <td><span class="badge bg-light text-dark border rounded-pill">{{ access_request.course.title }}</span></td>
-                                <td class="text-muted small">{{ access_request.requested_at|timesince }} ago</td>
-                                <td class="text-end">
-                                    <a href="{% url 'review_course_access' access_request.id 'approve' %}" class="btn btn-sm btn-success rounded-pill px-3 me-1">
-                                        <i class="fa-solid fa-check me-1"></i> Approve
-                                    </a>
-                                    <a href="{% url 'review_course_access' access_request.id 'reject' %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
-                                        <i class="fa-solid fa-xmark me-1"></i> Reject
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="4" class="text-center py-5 text-muted">No pending subject access requests.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+
 
         <div id="section-subjects" class="dashboard-section">
             <div class="glass-card">
                 <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold">Master Subject Library</h5>
-                    <button data-bs-toggle="modal" data-bs-target="#registerSubjectModal" class="btn btn-warning text-white btn-sm rounded-pill px-4 fw-bold shadow-sm">
-                        <i class="fa-solid fa-folder-plus me-1"></i> Create Subject
+                    <div>
+                        <h5 class="mb-0 fw-bold">Subject Library</h5>
+                        <p class="text-muted smaller mb-0">Create new subjects for teachers to assign exams.</p>
+                    </div>
+                    <button data-bs-toggle="modal" data-bs-target="#createSubjectModal" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-plus me-1"></i> Create Subject
                     </button>
                 </div>
                 <div class="table-responsive">
@@ -579,16 +537,23 @@
                         <tbody>
                             {% for subject in all_subjects %}
                             <tr>
-                                <td><span class="fw-bold">{{ subject.title }}</span></td>
+                                <td>
+                                    <span class="fw-bold">{{ subject.title }}</span>
+                                </td>
                                 <td class="text-muted small">{{ subject.created_at|date:"M d, Y" }}</td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-warning rounded-pill px-3 me-1"
-                                            onclick="openEditSubjectModal('{{ subject.id }}', '{{ subject.title }}', '{{ subject.description }}')">
-                                        <i class="fa-solid fa-edit"></i>
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" 
+                                             onclick="openEditSubjectModal('{{ subject.id }}', '{{ subject.title|escapejs }}', '{{ subject.description|escapejs }}', '{{ subject.price }}')">
+                                        <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
-                                    <a href="{% url 'delete_subject' subject.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="fa-solid fa-trash"></i></a>
+                                    <a href="{% url 'examiner_delete_subject' subject.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" 
+                                       onclick="return confirm('Delete this subject and all its exams permanently?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
                                 </td>
                             </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center py-5 text-muted">No subjects created yet.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -661,7 +626,8 @@
 <div class="modal fade" id="registerCandidateModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-5">
+            <div class="modal-body p-5 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-4" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="text-center mb-5">
                     <div class="modal-eg-icon bg-info bg-opacity-10 text-info mx-auto">
                         <i class="fa-solid fa-user-graduate"></i>
@@ -700,13 +666,6 @@
                             {% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Password</label>
-                            <input type="password" name="password" class="form-control" placeholder="Password" required>
-                            {% if candidate_form.password.errors %}
-                                <div class="field-error">{{ candidate_form.password.errors|striptags }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label small fw-bold">Assign to Teacher</label>
                             {{ candidate_form.conductor }}
                             {% if candidate_form.conductor.errors %}
@@ -714,7 +673,7 @@
                             {% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Exam Subject</label>
+                            <label class="form-label small fw-bold">Subject</label>
                             {{ candidate_form.course }}
                             {% if candidate_form.course.errors %}
                                 <div class="field-error">{{ candidate_form.course.errors|striptags }}</div>
@@ -731,7 +690,8 @@
 <div class="modal fade" id="registerTeacherModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-5">
+            <div class="modal-body p-5 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-4" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="text-center mb-5">
                     <div class="modal-eg-icon bg-primary bg-opacity-10 text-primary mx-auto">
                         <i class="fa-solid fa-user-plus"></i>
@@ -769,10 +729,6 @@
                                 <div class="field-error">{{ teacher_form.email.errors|striptags }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Password</label>
-                            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-                        </div>
                     </div>
                     <button type="submit" class="btn btn-eg-submit w-100 mt-5">AUTHORIZE TEACHER ACCOUNT</button>
                 </form>
@@ -781,39 +737,14 @@
     </div>
 </div>
 
-<!-- Modal: Subject Creation -->
-<div class="modal fade" id="registerSubjectModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
-                <h5 class="fw-bold mb-4">Create Master Subject</h5>
-                <form method="POST" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="register_subject">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Subject Title</label>
-                        <input type="text" name="title" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Description</label>
-                        <textarea name="description" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Thumbnail</label>
-                        <input type="file" name="thumbnail" class="form-control">
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100 py-3 text-white fw-bold rounded-3">CREATE SUBJECT</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Modal: Create Exam -->
 <div class="modal fade" id="createExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Draft New Exam Paper</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -855,7 +786,8 @@
 <div class="modal fade" id="editExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Update Exam Details</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -890,7 +822,8 @@
 <div class="modal fade" id="assignExamModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="text-center mb-4">
                     <div class="modal-eg-icon bg-primary bg-opacity-10 text-primary mx-auto">
                         <i class="fa-solid fa-share-nodes"></i>
@@ -928,7 +861,8 @@
 <div class="modal fade" id="editTeacherModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Edit Staff Teacher</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -953,40 +887,14 @@
     </div>
 </div>
 
-<!-- Modal: Edit Subject -->
-<div class="modal fade" id="editSubjectModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
-                <h5 class="fw-bold mb-4">Edit Master Subject</h5>
-                <form method="POST" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="edit_subject">
-                    <input type="hidden" name="subject_id" id="edit_subject_id">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Subject Title</label>
-                        <input type="text" name="title" id="edit_subject_title" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Description</label>
-                        <textarea name="description" id="edit_subject_desc" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Thumbnail (Optional)</label>
-                        <input type="file" name="thumbnail" class="form-control">
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100 py-3 text-white fw-bold rounded-3">UPDATE SUBJECT</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Modal: Edit Candidate -->
 <div class="modal fade" id="editCandidateModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <h5 class="fw-bold mb-4">Edit Candidate Details</h5>
                 <form method="POST">
                     {% csrf_token %}
@@ -1005,6 +913,59 @@
                         <input type="email" name="email" id="edit_candidate_email" class="form-control" required>
                     </div>
                     <button type="submit" class="btn btn-secondary w-100 py-3 fw-bold rounded-3">UPDATE CANDIDATE</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Subject -->
+<div class="modal fade" id="createSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="fw-bold mb-4">Create New Subject</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_subject">
+                    <input type="hidden" name="price" value="0.00">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Subject Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. Mathematics, Physics" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Enter subject details (optional)"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3">CREATE SUBJECT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Subject -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="fw-bold mb-4">Edit Subject</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_subject">
+                    <input type="hidden" name="subject_id" id="edit_subject_id">
+                    <input type="hidden" name="price" id="edit_subject_price" value="0.00">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Subject Title</label>
+                        <input type="text" name="title" id="edit_subject_title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="description" id="edit_subject_desc" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3">UPDATE SUBJECT</button>
                 </form>
             </div>
         </div>
@@ -1066,12 +1027,7 @@
         new bootstrap.Modal(document.getElementById('editTeacherModal')).show();
     }
 
-    function openEditSubjectModal(id, title, desc) {
-        document.getElementById('edit_subject_id').value = id;
-        document.getElementById('edit_subject_title').value = title;
-        document.getElementById('edit_subject_desc').value = desc;
-        new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
-    }
+
 
     function openEditExamModal(id, title, duration, score, desc) {
         document.getElementById('edit_exam_id').value = id;
@@ -1094,6 +1050,14 @@
         document.getElementById('edit_candidate_lname').value = lname;
         document.getElementById('edit_candidate_email').value = email;
         new bootstrap.Modal(document.getElementById('editCandidateModal')).show();
+    }
+
+    function openEditSubjectModal(id, title, desc, price) {
+        document.getElementById('edit_subject_id').value = id;
+        document.getElementById('edit_subject_title').value = title;
+        document.getElementById('edit_subject_desc').value = desc;
+        document.getElementById('edit_subject_price').value = price;
+        new bootstrap.Modal(document.getElementById('editSubjectModal')).show();
     }
 </script>
 

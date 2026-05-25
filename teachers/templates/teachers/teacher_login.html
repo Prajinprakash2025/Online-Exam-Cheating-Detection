@@ -131,6 +131,11 @@
         transform: translateY(-2px);
     }
 
+    input[readonly] {
+        color: #64748b;
+        cursor: default;
+    }
+
     .form-label {
         font-weight: 700;
         color: var(--eg-dark);
@@ -190,6 +195,9 @@
 
         <!-- Form Section -->
         <div class="auth-form-side">
+            <a href="javascript:history.back()" class="text-decoration-none text-muted fw-bold d-inline-flex align-items-center gap-2 mb-3" style="font-size:0.9rem;">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </a>
             <div class="form-header">
                 <h2>Teacher Sign In</h2>
                 <p>Manage your assigned exam environment</p>
@@ -205,22 +213,35 @@
 
             <form method="post">
                 {% csrf_token %}
-                <div class="mb-4">
-                    <label class="form-label">Email Address</label>
-                    <input type="email" name="email" placeholder="Enter your registered email" required>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" placeholder="••••••••" required>
-                </div>
+                {% if otp_sent %}
+                    <input type="hidden" name="action" value="verify_otp">
+                    <div class="mb-4">
+                        <label class="form-label">Verification Email</label>
+                        <input type="email" value="{{ otp_email }}" readonly>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Enter 6-Digit OTP</label>
+                        <input type="text" name="otp" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required autofocus>
+                    </div>
 
-                <div class="d-flex justify-content-end mb-4">
-                    <a href="#" class="text-muted small fw-bold text-decoration-none">Forgot Password?</a>
-                </div>
+                    <div class="d-flex justify-content-end mb-4">
+                        <a href="{% url 'teacher_login' %}?reset=1" class="text-muted small fw-bold text-decoration-none">Use different email</a>
+                    </div>
 
-                <button type="submit" class="btn btn-submit w-100">
-                    SIGN IN TO TERMINAL <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
-                </button>
+                    <button type="submit" class="btn btn-submit w-100">
+                        VERIFY OTP & ENTER CONSOLE <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
+                    </button>
+                {% else %}
+                    <input type="hidden" name="action" value="send_otp">
+                    <div class="mb-4">
+                        <label class="form-label">Teacher Email</label>
+                        <input type="email" name="email" placeholder="Enter your registered email" autocomplete="email" required autofocus>
+                    </div>
+
+                    <button type="submit" class="btn btn-submit w-100">
+                        SEND LOGIN OTP <i class="fa-solid fa-paper-plane ms-2"></i>
+                    </button>
+                {% endif %}
 
                 <div class="link-footer">
                     Not a registered teacher yet? <a href="{% url 'contact' %}">Contact Administrator</a>

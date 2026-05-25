@@ -14,7 +14,7 @@ class User(AbstractUser):
     is_instructor = models.BooleanField(default=False)
     is_teacher = models.BooleanField(default=False)
     is_examiner = models.BooleanField(default=False)
-    is_student = models.BooleanField(default=True)
+    is_student = models.BooleanField(default=False)
     
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -43,6 +43,8 @@ class Course(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     thumbnail = models.ImageField(upload_to='thumbnails/', blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_courses')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -282,3 +284,15 @@ class ProctoringLog(models.Model):
 
     def __str__(self):
         return f"{self.get_violation_type_display()} at {self.timestamp.strftime('%H:%M:%S')}"
+
+
+class Payment(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    transaction_id = models.CharField(max_length=100, unique=True)
+    status = models.CharField(max_length=20, default='completed')
+
+    def __str__(self):
+        return f"{self.student.username} - {self.course.title} (${self.amount})"

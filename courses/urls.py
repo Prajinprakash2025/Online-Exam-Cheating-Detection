@@ -7,6 +7,9 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     # --- General Pages ---
     path('', views.home, name='home'),
+    path('about/', views.about, name='about'),
+    path('privacy/', views.privacy_policy, name='privacy_policy'),
+    path('faq/', views.faq, name='faq'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.edit_profile_view, name='edit_profile'),
     path('dashboard/', views.instructor_dashboard, name='instructor_dashboard'),
@@ -18,6 +21,7 @@ urlpatterns = [
 
     # --- Instructor: Creating Content ---
     path('course/create/', views.create_course, name='create_course'),
+    path('course/<int:course_id>/edit/', views.edit_course, name='edit_course'),
     path('course/<int:course_id>/add-video/', views.add_video, name='add_video'),
     path('video/<int:video_id>/add-quiz/', views.add_quiz, name='add_quiz'),
 
@@ -33,6 +37,7 @@ urlpatterns = [
     path('contact/', views.contact, name='contact'),
     path('courses/', views.course_list, name='course_list'), 
     path('course/<int:course_id>/request-access/', views.request_course_access, name='request_course_access'),
+    path('course/<int:course_id>/checkout/', views.course_checkout, name='course_checkout'),
 
     # --- Video & Quiz Management ---
     path('video/<int:video_id>/delete/', views.delete_video, name='delete_video'),
@@ -43,6 +48,8 @@ urlpatterns = [
     path('student/<int:student_id>/view/', views.student_detail, name='student_detail'),
     path('student/<int:student_id>/delete/', views.delete_student, name='delete_student'),
     path('students/', views.student_list, name='student_list'), 
+    path('dashboard/user/<int:user_id>/toggle-status/', views.toggle_portal_user_status, name='toggle_portal_user_status'),
+    path('dashboard/user/<int:user_id>/delete/', views.delete_portal_user, name='delete_portal_user'),
 
     # --- OTP VERIFICATION (SIGNUP) ---
     # This expects 6 digits (Don't touch this)

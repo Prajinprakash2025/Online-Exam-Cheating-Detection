@@ -10,11 +10,12 @@ from .models import Course, Video, Quiz, User, Review, Comment
 class CourseForm(forms.ModelForm):
     class Meta:
         model = Course
-        fields = ['title', 'description', 'thumbnail']
+        fields = ['title', 'description', 'thumbnail', 'price']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control rounded-pill px-4', 'placeholder': 'Course Title'}),
             'description': forms.Textarea(attrs={'class': 'form-control rounded-4 px-4', 'rows': 4, 'placeholder': 'Course Description'}),
             'thumbnail': forms.FileInput(attrs={'class': 'form-control rounded-pill px-4'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control rounded-pill px-4', 'placeholder': 'Course Price (₹)', 'min': 0, 'step': '0.01'}),
         }
 
 # 2. Video & Material Form

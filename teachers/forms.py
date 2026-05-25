@@ -7,11 +7,10 @@ User = get_user_model()
 
 
 class TeacherCreateForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, label="Password")
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'first_name', 'last_name']
+        fields = ['email', 'first_name', 'last_name']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,7 +28,7 @@ class TeacherCreateForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password'])
+        user.set_password(User.objects.make_random_password())
         user.is_teacher = True
         user.is_student = False
         user.is_staff = False
@@ -60,12 +59,11 @@ class TeacherStudentAssignmentForm(forms.ModelForm):
         fields = ['teacher', 'student', 'course']
 
 class StudentCreateForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, label="Password")
-    course = forms.ModelChoiceField(queryset=Course.objects.all(), required=False, label="Assign to Course")
+    course = forms.ModelChoiceField(queryset=Course.objects.all(), required=False, label="Assign to Subject")
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'first_name', 'last_name']
+        fields = ['email', 'first_name', 'last_name']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,7 +75,7 @@ class StudentCreateForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password'])
+        user.set_unusable_password()
         user.is_teacher = False
         user.is_examiner = False
         user.is_student = True

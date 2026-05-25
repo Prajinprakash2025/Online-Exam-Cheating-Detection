@@ -16,7 +16,7 @@
         display: flex;
         min-height: calc(100vh - 76px); /* Adjusts for your top navbar */
         background-color: var(--bg-cream);
-        overflow-x: hidden;
+
     }
 
     /* Sidebar Styles */
@@ -27,6 +27,10 @@
         transition: all 0.3s ease-in-out;
         box-shadow: 2px 0 10px rgba(0,0,0,0.05);
         z-index: 1000;
+        position: sticky;
+        top: 76px;
+        height: calc(100vh - 76px);
+        overflow-y: auto;
     }
 
     #sidebar.toggled {
@@ -126,16 +130,19 @@
                 <i class="fa-solid fa-chart-pie" style="width: 20px;"></i> Overview
             </a>
             <a onclick="switchSection('content', this)" class="sidebar-link">
-                <i class="fa-solid fa-file-invoice" style="width: 20px;"></i> Exam Subjects
+                <i class="fa-solid fa-file-invoice" style="width: 20px;"></i> Courses
             </a>
             <a onclick="switchSection('exams', this)" class="sidebar-link">
                 <i class="fa-solid fa-shield-halved" style="width: 20px;"></i> Proctored Sessions
             </a>
             <a onclick="switchSection('examiners', this)" class="sidebar-link">
-                <i class="fa-solid fa-user-tie" style="width: 20px;"></i> Examiners
+                <i class="fa-solid fa-user-tie" style="width: 20px;"></i> Conductors
             </a>
             <a onclick="switchSection('students', this)" class="sidebar-link">
                 <i class="fa-solid fa-users" style="width: 20px;"></i> Candidate Registry
+            </a>
+            <a onclick="switchSection('access', this)" class="sidebar-link">
+                <i class="fa-solid fa-unlock-keyhole" style="width: 20px;"></i> Course Access
             </a>
         </div>
     </nav>
@@ -150,16 +157,18 @@
                 <h4 class="mb-0 fw-bolder" style="color: var(--primary-dark);">ExamGate <span style="color: var(--primary-purple);">Admin</span></h4>
             </div>
             <div>
-                <a href="{% url 'create_course' %}" class="btn btn-custom rounded-pill px-4 py-2 shadow-sm fw-bold">
-                    <i class="fa-solid fa-file-circle-plus me-2"></i>New Subject
-                </a>
+                <button data-bs-toggle="modal" data-bs-target="#createCourseModal" class="btn btn-custom rounded-pill px-4 py-2 shadow-sm fw-bold">
+                    <i class="fa-solid fa-file-circle-plus me-2"></i>New Course
+                </button>
             </div>
         </div>
 
         <div class="container-fluid p-4 p-md-5">
 
+            <!-- Section: Overview -->
             <div id="section-overview" class="dashboard-section active-section">
                 <div class="row g-4">
+                    <!-- Registered Candidates -->
                     <div class="col-xl-4 col-md-6">
                         <div class="card border-0 shadow-sm p-4 rounded-4 hover-scale h-100" style="background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%); color: white;">
                             <div class="d-flex align-items-center">
@@ -174,7 +183,51 @@
                         </div>
                     </div>
 
+                    <!-- Total Revenue -->
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card border-0 shadow-sm p-4 rounded-4 hover-scale h-100" style="background: linear-gradient(135deg, #8e44ad 0%, #b862d6 100%); color: white;">
+                            <div class="d-flex align-items-center">
+                                <div class="p-3 rounded-circle me-4 bg-white bg-opacity-10">
+                                    <i class="fa-solid fa-hand-holding-dollar fs-2 text-white"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 text-white-50 text-uppercase fw-bold ls-1" style="font-size: 0.8rem;">Total Revenue</h6>
+                                    <h2 class="fw-bold mb-0 display-6">₹{{ total_revenue|floatformat:2 }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Sales -->
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card border-0 shadow-sm p-4 rounded-4 hover-scale h-100" style="background: linear-gradient(135deg, #16a085 0%, #1abc9c 100%); color: white;">
+                            <div class="d-flex align-items-center">
+                                <div class="p-3 rounded-circle me-4 bg-white bg-opacity-10">
+                                    <i class="fa-solid fa-cart-shopping fs-2 text-white"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 text-white-50 text-uppercase fw-bold ls-1" style="font-size: 0.8rem;">Total Sales</h6>
+                                    <h2 class="fw-bold mb-0 display-6">{{ total_sales }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seaborn Graph and Recent Activity Row -->
+                <div class="row g-4 mt-3">
                     <div class="col-xl-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
+                            <h5 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-chart-line text-primary me-2"></i>Revenue Analytics</h5>
+                            {% if chart_url %}
+                                <img src="{{ chart_url }}" class="img-fluid rounded-3" alt="Revenue Analytics Graph" style="max-height: 420px; object-fit: contain; width: 100%;">
+                            {% else %}
+                                <div class="p-5 text-center text-muted">No graph available.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-xl-4">
                         <div class="card border-0 shadow-sm rounded-4 h-100">
                             <div class="card-header bg-white p-4 border-bottom d-flex align-items-center">
                                 <h6 class="mb-0 fw-bold fs-5" style="color: var(--primary-dark);"><i class="fa-solid fa-bolt text-warning me-2"></i>Live Activity Feed</h6>
@@ -199,20 +252,66 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Recent Sales Section -->
+                <div class="row g-4 mt-3">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                            <div class="card-header bg-white p-4 border-bottom">
+                                <h5 class="mb-0 fw-bold fs-5" style="color: var(--primary-dark);"><i class="fa-solid fa-wallet text-success me-2"></i>Recent Transactions</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table align-middle mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Student</th>
+                                                <th class="py-3 text-uppercase text-muted small fw-bold">Subject / Course</th>
+                                                <th class="py-3 text-uppercase text-muted small fw-bold">Transaction ID</th>
+                                                <th class="py-3 text-uppercase text-muted small fw-bold">Amount</th>
+                                                <th class="pe-4 py-3 text-end text-uppercase text-muted small fw-bold">Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for sale in recent_sales %}
+                                            <tr>
+                                                <td class="ps-4 py-4 fw-bold text-dark">
+                                                    <i class="fa-solid fa-circle-user text-muted me-2 fs-5 align-middle"></i> {{ sale.student.username }}
+                                                </td>
+                                                <td class="py-4">
+                                                    <span class="badge bg-light text-dark border rounded-pill">{{ sale.course.title }}</span>
+                                                </td>
+                                                <td class="py-4 font-monospace text-muted">{{ sale.transaction_id }}</td>
+                                                <td class="py-4 fw-bold text-success">₹{{ sale.amount|floatformat:2 }}</td>
+                                                <td class="pe-4 py-4 text-end text-muted small">{{ sale.payment_date|date:"M d, Y H:i" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-center py-5 text-muted fs-5">No payments recorded yet.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
+            <!-- Section: Exam Subjects -->
             <div id="section-content" class="dashboard-section">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Exam Subject Library</h5>
-                        <span class="badge bg-light text-dark border fs-6 px-3 py-2 rounded-pill">{{ courses.count }} Active Subjects</span>
+                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Course Library</h5>
+                        <span class="badge bg-light text-dark border fs-6 px-3 py-2 rounded-pill">{{ courses.count }} Active Courses</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold" style="width: 50%;">Exam Structure</th>
+                                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold" style="width: 50%;">Course Structure</th>
                                         <th class="py-3 text-uppercase text-muted small fw-bold">Enrollment</th>
                                         <th class="pe-4 py-3 text-end text-uppercase text-muted small fw-bold">Actions</th>
                                     </tr>
@@ -226,7 +325,10 @@
                                                     {% if course.thumbnail %}<img src="{{ course.thumbnail.url }}" class="w-100 h-100" style="object-fit: cover;">{% else %}<i class="fa-solid fa-book-open text-muted fs-4"></i>{% endif %}
                                                 </div>
                                                 <div>
-                                                    <h6 class="fw-bold mb-1 text-dark fs-5">{{ course.title }}</h6>
+                                                    <h6 class="fw-bold mb-1 text-dark fs-5">
+                                                        {{ course.title }}
+                                                        <span class="badge bg-purple bg-opacity-10 text-purple border border-purple border-opacity-25 ms-2" style="font-size: 0.8rem; color: var(--primary-purple) !important;">₹{{ course.price }}</span>
+                                                    </h6>
                                                     <small class="text-muted"><i class="fa-solid fa-file-contract me-1"></i> {{ course.videos.count }} Exam Sessions</small>
                                                 </div>
                                             </div>
@@ -258,6 +360,10 @@
                                             <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 border border-primary border-opacity-25 fs-6"><i class="fa-solid fa-user-graduate me-2"></i> {{ course.enrolled_count }} Students</span>
                                         </td>
                                         <td class="align-top py-4 pe-4 text-end">
+                                            <button class="btn btn-outline-primary rounded-pill fw-bold shadow-sm px-3 me-2"
+                                                    onclick="openEditCourseModal('{{ course.id }}', '{{ course.title|escapejs }}', '{{ course.description|escapejs }}', '{{ course.price }}')">
+                                                <i class="fa-solid fa-pen-to-square me-1"></i> Edit
+                                            </button>
                                             <a href="{% url 'add_video' course.id %}" class="btn btn-outline-custom rounded-pill fw-bold shadow-sm px-4"><i class="fa-solid fa-plus me-2"></i> Add Exam Session</a>
                                         </td>
                                     </tr>
@@ -271,6 +377,7 @@
                 </div>
             </div>
 
+            <!-- Section: Proctored Sessions -->
             <div id="section-exams" class="dashboard-section">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
@@ -320,11 +427,12 @@
                 </div>
             </div>
 
+            <!-- Section: Conductors -->
             <div id="section-examiners" class="dashboard-section">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                     <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Examiners</h5>
-                        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ examiners.count }} Registered</span>
+                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Conductors</h5>
+                        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ conductors.count }} Registered</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -333,25 +441,48 @@
                                     <tr>
                                         <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Username</th>
                                         <th class="py-3 text-uppercase text-muted small fw-bold">Email</th>
+                                        <th class="py-3 text-uppercase text-muted small fw-bold">Status</th>
                                         <th class="py-3 text-uppercase text-muted small fw-bold">Joined</th>
+                                        <th class="pe-4 py-3 text-end text-uppercase text-muted small fw-bold">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for examiner in examiners %}
+                                    {% for conductor in conductors %}
                                     <tr>
                                         <td class="ps-4 py-4 fw-bold text-dark">
                                             <div class="d-flex align-items-center">
                                                 <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
                                                     <i class="fa-solid fa-user-tie text-secondary"></i>
                                                 </div>
-                                                {{ examiner.username }}
+                                                {{ conductor.username }}
                                             </div>
                                         </td>
-                                        <td class="py-4 text-muted">{{ examiner.email }}</td>
-                                        <td class="py-4 small text-muted">{{ examiner.date_joined|date:"M d, Y" }}</td>
+                                        <td class="py-4 text-muted">{{ conductor.email }}</td>
+                                        <td class="py-4">
+                                            {% if conductor.is_active %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 rounded-pill">Blocked</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-4 small text-muted">{{ conductor.date_joined|date:"M d, Y" }}</td>
+                                        <td class="pe-4 py-4">
+                                            <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                                <form method="post" action="{% url 'toggle_portal_user_status' conductor.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm {% if conductor.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %} rounded-pill px-3">
+                                                        {% if conductor.is_active %}Block{% else %}Activate{% endif %}
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{% url 'delete_portal_user' conductor.id %}" onsubmit="return confirm('Delete this conductor account permanently?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
                                     </tr>
                                     {% empty %}
-                                    <tr><td colspan="3" class="text-center py-5 text-muted fs-5">No examiners registered yet.</td></tr>
+                                    <tr><td colspan="5" class="text-center py-5 text-muted fs-5">No conductors registered yet.</td></tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -360,6 +491,7 @@
                 </div>
             </div>
 
+            <!-- Section: Candidate Registry -->
             <div id="section-students" class="dashboard-section">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
@@ -373,8 +505,9 @@
                                     <tr>
                                         <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Username</th>
                                         <th class="py-3 text-uppercase text-muted small fw-bold">Email</th>
+                                        <th class="py-3 text-uppercase text-muted small fw-bold">Status</th>
                                         <th class="py-3 text-uppercase text-muted small fw-bold">Joined</th>
-                                        <th class="pe-4 py-3 text-end text-uppercase text-muted small fw-bold">Action</th>
+                                        <th class="pe-4 py-3 text-end text-uppercase text-muted small fw-bold">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -389,13 +522,32 @@
                                             </div>
                                         </td>
                                         <td class="py-4 text-muted">{{ student.email }}</td>
+                                        <td class="py-4">
+                                            {% if student.is_active %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 rounded-pill">Blocked</span>
+                                            {% endif %}
+                                        </td>
                                         <td class="py-4 small text-muted">{{ student.date_joined|date:"M d, Y" }}</td>
                                         <td class="pe-4 py-4 text-end">
-                                            <a href="{% url 'student_detail' student.id %}" class="btn btn-outline-secondary rounded-pill px-4">Profile</a>
+                                            <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                                <a href="{% url 'student_detail' student.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Profile</a>
+                                                <form method="post" action="{% url 'toggle_portal_user_status' student.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm {% if student.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %} rounded-pill px-3">
+                                                        {% if student.is_active %}Block{% else %}Activate{% endif %}
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{% url 'delete_portal_user' student.id %}" onsubmit="return confirm('Delete this candidate account permanently?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Delete</button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                     {% empty %}
-                                    <tr><td colspan="4" class="text-center py-5 text-muted fs-5">No students registered yet.</td></tr>
+                                    <tr><td colspan="5" class="text-center py-5 text-muted fs-5">No candidates registered yet.</td></tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -404,7 +556,150 @@
                 </div>
             </div>
 
-        </div> </div> </div> <script>
+            <!-- Section: Course Access -->
+            <div id="section-access" class="dashboard-section">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white p-4 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold fs-4" style="color: var(--primary-dark);">Course Access Requests</h5>
+                        <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill border border-warning">
+                            <i class="fa-solid fa-clock me-1"></i> {{ access_requests.count }} Pending
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4 py-3 text-uppercase text-muted small fw-bold">Student</th>
+                                        <th class="py-3 text-uppercase text-muted small fw-bold">Course</th>
+                                        <th class="py-3 text-uppercase text-muted small fw-bold">Requested</th>
+                                        <th class="pe-4 py-3 text-end text-uppercase text-muted small fw-bold">Decision</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for access_request in access_requests %}
+                                    <tr>
+                                        <td class="ps-4 py-4 fw-bold text-dark">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 40px; height: 40px;">
+                                                    <i class="fa-solid fa-user text-secondary"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="mb-0 fw-bold">{{ access_request.student.get_full_name|default:access_request.student.username }}</p>
+                                                    <small class="text-muted" style="font-weight: normal;">{{ access_request.student.email }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-4">
+                                            <span class="badge bg-light text-dark border rounded-pill">{{ access_request.course.title }}</span>
+                                        </td>
+                                        <td class="py-4 text-muted small">{{ access_request.requested_at|timesince }} ago</td>
+                                        <td class="pe-4 py-4 text-end">
+                                            <a href="{% url 'review_course_access' access_request.id 'approve' %}" class="btn btn-sm btn-success rounded-pill px-3 me-1">
+                                                <i class="fa-solid fa-check me-1"></i> Approve
+                                            </a>
+                                            <a href="{% url 'review_course_access' access_request.id 'reject' %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                                <i class="fa-solid fa-xmark me-1"></i> Reject
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-5 text-muted fs-5">No pending course access requests.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Course -->
+<div class="modal fade" id="createCourseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="text-center mb-4">
+                    <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="fa-solid fa-rocket fs-3" style="color: var(--primary-purple);"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1" style="color: var(--primary-dark);">Launch New Course</h5>
+                    <p class="text-muted small mb-0">Create a space for your students to learn.</p>
+                </div>
+                <form method="POST" action="{% url 'create_course' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Title</label>
+                        {{ course_form.title }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        {{ course_form.description }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Price (₹)</label>
+                        {{ course_form.price }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Thumbnail</label>
+                        {{ course_form.thumbnail }}
+                    </div>
+                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold rounded-pill shadow-sm mt-3">
+                        <i class="fa-solid fa-plus me-1"></i> CREATE COURSE
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Course -->
+<div class="modal fade" id="editCourseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="text-center mb-4">
+                    <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="fa-solid fa-pen-to-square fs-3" style="color: var(--primary-purple);"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1" style="color: var(--primary-dark);">Edit Course</h5>
+                    <p class="text-muted small mb-0">Update course details and pricing.</p>
+                </div>
+                <form method="POST" id="editCourseForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Title</label>
+                        <input type="text" name="title" id="edit_course_title" class="form-control rounded-pill px-4" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="description" id="edit_course_description" class="form-control rounded-4 px-4" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Price (₹)</label>
+                        <input type="number" name="price" id="edit_course_price" class="form-control rounded-pill px-4" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Thumbnail</label>
+                        <input type="file" name="thumbnail" id="edit_course_thumbnail" class="form-control rounded-pill px-4">
+                    </div>
+                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold rounded-pill shadow-sm mt-3">
+                        <i class="fa-solid fa-check me-1"></i> UPDATE COURSE
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
     // Handle Sidebar Toggle
     document.getElementById("sidebarToggle").addEventListener("click", function() {
         document.getElementById("sidebar").classList.toggle("toggled");
@@ -424,7 +719,39 @@
         document.getElementById('section-' + sectionId).classList.add('active-section');
         
         // Highlight the clicked link
-        clickedLink.classList.add('active');
+        if (clickedLink) {
+            clickedLink.classList.add('active');
+        } else {
+            // Find sidebar link by onclick attribute containing the section ID
+            const link = Array.from(document.querySelectorAll('.sidebar-link')).find(l => l.getAttribute('onclick') && l.getAttribute('onclick').includes(sectionId));
+            if (link) link.classList.add('active');
+        }
+
+        // Update URL hash without scrolling
+        if (history.pushState) {
+            history.pushState(null, null, '#' + sectionId);
+        } else {
+            location.hash = '#' + sectionId;
+        }
+    }
+
+    // Persist active section on page load / hash redirect
+    window.onload = function() {
+        if (location.hash) {
+            const sectionId = location.hash.replace('#', '');
+            const targetSec = document.getElementById('section-' + sectionId);
+            if (targetSec) {
+                switchSection(sectionId);
+            }
+        }
+    }
+
+    function openEditCourseModal(id, title, description, price) {
+        document.getElementById('editCourseForm').action = "/course/" + id + "/edit/";
+        document.getElementById('edit_course_title').value = title;
+        document.getElementById('edit_course_description').value = description;
+        document.getElementById('edit_course_price').value = price;
+        new bootstrap.Modal(document.getElementById('editCourseModal')).show();
     }
 </script>
 {% endblock %}

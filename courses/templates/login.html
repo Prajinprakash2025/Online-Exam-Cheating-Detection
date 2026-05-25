@@ -241,6 +241,9 @@
 
     <!-- Right Form -->
     <div class="auth-form-side">
+      <a href="javascript:history.back()" class="text-decoration-none text-muted fw-bold d-inline-flex align-items-center gap-2 mb-3" style="font-size:0.9rem;">
+        <i class="fa-solid fa-arrow-left"></i> Back
+      </a>
       <div class="form-header">
         <h3>{% if otp_sent %}Verify OTP{% elif is_admin_login %}Admin Sign In{% else %}Student Sign In{% endif %}</h3>
         <p class="text-muted small">
@@ -289,9 +292,6 @@
 
           <div class="d-flex justify-content-between align-items-center mb-4 small fw-bold">
             <span class="text-muted">OTP will be printed in the terminal.</span>
-            {% if not is_admin_login %}
-              <a href="{% url 'forgot_password' %}" class="text-muted text-decoration-none">Forgot Password?</a>
-            {% endif %}
           </div>
 
           <button type="submit" class="btn-auth">

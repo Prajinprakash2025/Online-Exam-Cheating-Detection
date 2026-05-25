@@ -31,7 +31,28 @@ def is_admin(user):
 def home(request):
     # Fetch Examiners and Teachers for the landing page directory
     conductors = User.objects.filter(Q(is_examiner=True) | Q(is_teacher=True)).exclude(is_superuser=True).order_by('?')[:8]
-    context = {'conductors': conductors}
+    # Fetch all subjects/courses to display on the landing page
+    courses = Course.objects.annotate(video_count=Count('videos')).order_by('-created_at')
+    course_list_items = list(courses)
+    enrolled_course_ids = set()
+    access_requests_by_course = {}
+
+    if request.user.is_authenticated:
+        enrolled_course_ids = set(Enrollment.objects.filter(
+            student=request.user
+        ).values_list('course_id', flat=True))
+        access_requests_by_course = {
+            item.course_id: item for item in CourseAccessRequest.objects.filter(student=request.user)
+        }
+
+    for course in course_list_items:
+        course.is_enrolled = course.id in enrolled_course_ids
+        course.access_request = access_requests_by_course.get(course.id)
+
+    context = {
+        'conductors': conductors,
+        'courses': course_list_items,
+    }
 
     if request.user.is_authenticated:
         from teachers.models import TeacherStudentAssignment
@@ -67,6 +88,15 @@ def home(request):
             })
 
     return render(request, 'home.html', context)
+
+def about(request):
+    return render(request, 'about.html')
+
+def privacy_policy(request):
+    return render(request, 'privacy_policy.html')
+
+def faq(request):
+    return render(request, 'faq.html')
 
 def course_list(request):
     query = request.GET.get('q')
@@ -105,36 +135,64 @@ def request_course_access(request, course_id):
     course = get_object_or_404(Course, id=course_id)
 
     if not request.user.is_student:
-        messages.error(request, "Only student accounts can request subject access.")
+        messages.error(request, "Only student accounts can enroll in courses.")
         return redirect('course_list')
 
-    if Enrollment.objects.filter(student=request.user, course=course).exists():
-        messages.info(request, "You already have access to this subject.")
-        return redirect('course_viewer', course_id=course.id, video_order=1)
-
-    access_request, created = CourseAccessRequest.objects.get_or_create(
+    enrollment, created = Enrollment.objects.get_or_create(student=request.user, course=course)
+    
+    CourseAccessRequest.objects.update_or_create(
         student=request.user,
         course=course,
-        defaults={'status': 'pending'},
+        defaults={'status': 'approved', 'reviewed_at': timezone.now()}
     )
 
-    if not created and access_request.status == 'rejected':
-        access_request.status = 'pending'
-        access_request.requested_at = timezone.now()
-        access_request.reviewed_at = None
-        access_request.reviewed_by = None
-        access_request.save()
-        messages.success(request, "Your access request was sent again. Please wait for conductor approval.")
-    elif created:
-        messages.success(request, "Access request sent. Please wait for conductor approval.")
-    elif access_request.status == 'approved':
-        Enrollment.objects.get_or_create(student=request.user, course=course)
-        messages.success(request, "Your access is approved. You can start learning now.")
-        return redirect('course_viewer', course_id=course.id, video_order=1)
-    else:
-        messages.info(request, "Your request is already pending conductor approval.")
+    messages.success(request, f"Successfully enrolled in '{course.title}'! You can start learning now.")
+    return redirect('course_viewer', course_id=course.id, video_order=1)
 
-    return redirect('course_list')
+
+@login_required
+def course_checkout(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    if not request.user.is_student:
+        messages.error(request, "Only student accounts can purchase courses.")
+        return redirect('course_list')
+        
+    if Enrollment.objects.filter(student=request.user, course=course).exists():
+        messages.info(request, "You are already enrolled in this course.")
+        return redirect('course_viewer', course_id=course.id, video_order=1)
+        
+    if request.method == 'POST':
+        import uuid
+        from courses.models import Payment
+        
+        payment = Payment.objects.create(
+            student=request.user,
+            course=course,
+            amount=course.price,
+            transaction_id=f"TXN-{uuid.uuid4().hex[:12].upper()}",
+            status='completed'
+        )
+        
+        Enrollment.objects.get_or_create(student=request.user, course=course)
+        
+        CourseAccessRequest.objects.update_or_create(
+            student=request.user,
+            course=course,
+            defaults={'status': 'approved', 'reviewed_at': timezone.now()}
+        )
+        
+        try:
+            from courses.utils import generate_revenue_chart
+            generate_revenue_chart()
+        except Exception as e:
+            print(f"Error regenerating chart: {e}")
+            
+        messages.success(request, f"Mock payment of ₹{course.price} successful! '{course.title}' unlocked.")
+        return redirect('course_viewer', course_id=course.id, video_order=1)
+        
+    return render(request, 'checkout.html', {'course': course})
+
 
 def mentors(request):
     return render(request, 'mentors.html')
@@ -435,17 +493,32 @@ def edit_profile_view(request):
 @login_required
 def course_viewer(request, course_id, video_order):
     course = get_object_or_404(Course, id=course_id)
-    video = get_object_or_404(Video, course=course, order=video_order)
     
     enrollment = Enrollment.objects.filter(student=request.user, course=course).first()
     if not enrollment:
-        messages.error(request, "Please request access. A conductor must approve this subject before you can attend.")
+        messages.error(request, "Please enroll in or purchase this course first to start learning.")
         return redirect('course_list')
 
+    all_videos = course.videos.all().order_by('order')
+    if not all_videos.exists():
+        return render(request, 'empty_course.html', {'course': course})
+
+    first_video = all_videos.first()
+    
+    # Self-heal lock condition: if enrollment.current_lesson_index is less than the first video's order,
+    # update it to the first video's order so the student is not locked out of the start of the course.
+    if enrollment.current_lesson_index < first_video.order:
+        enrollment.current_lesson_index = first_video.order
+        enrollment.save(update_fields=['current_lesson_index'])
+
+    # Self-heal video matching: fallback to the first video if the requested video_order is not found
+    video = Video.objects.filter(course=course, order=video_order).first()
+    if not video:
+        return redirect('course_viewer', course_id=course.id, video_order=first_video.order)
+    
     if video_order > enrollment.current_lesson_index:
         return render(request, 'locked.html', {'course': course})
 
-    all_videos = course.videos.all().order_by('order')
     has_quiz = video.questions.exists()
     is_passed = Progress.objects.filter(student=request.user, video=video, passed=True).exists()
 
@@ -475,15 +548,31 @@ def take_quiz(request, video_id):
         defaults={'status': 'ongoing'}
     )
     
-    # 2. START TIMER (Giving them 15 minutes by default for a quiz)
-    if created or not session.end_time:
+    if request.method == 'POST' and request.POST.get('action') == 'start_assessment':
         session.end_time = timezone.now() + timedelta(minutes=15)
-        session.save()
+        session.status = 'ongoing'
+        session.save(update_fields=['end_time', 'status'])
+        request.session[f'assessment_started_{session.id}'] = True
+        return redirect('take_quiz', video_id=video.id)
+
+    if session.status == 'ongoing' and session.end_time and not request.session.get(f'assessment_started_{session.id}'):
+        session.end_time = None
+        session.save(update_fields=['end_time'])
+
+    exam_not_started = not session.end_time
+    if exam_not_started:
+        return render(request, 'take_quiz.html', {
+            'questions': questions,
+            'video': video,
+            'session': session,
+            'remaining_time': 15 * 60,
+            'exam_not_started': True,
+        })
 
     remaining_time = (session.end_time - timezone.now()).total_seconds()
 
     # 3. GRADING & SUBMISSION LOGIC
-    if request.method == 'POST' or remaining_time <= 0:
+    if (request.method == 'POST' and request.POST.get('action') != 'start_assessment') or remaining_time <= 0:
         score = 0
         total_questions = questions.count()
         
@@ -522,7 +611,8 @@ def take_quiz(request, video_id):
         'questions': questions, 
         'video': video,
         'session': session,
-        'remaining_time': int(remaining_time)
+        'remaining_time': int(remaining_time),
+        'exam_not_started': False,
     })
 
 @login_required
@@ -553,15 +643,31 @@ def start_exam(request, exam_id):
         defaults={'status': 'ongoing'}
     )
     
-    # 2. START TIMER
-    if created or not session.end_time:
+    if request.method == 'POST' and request.POST.get('action') == 'start_assessment':
         session.end_time = timezone.now() + timedelta(minutes=exam.duration_minutes)
-        session.save()
+        session.status = 'ongoing'
+        session.save(update_fields=['end_time', 'status'])
+        request.session[f'assessment_started_{session.id}'] = True
+        return redirect('start_exam', exam_id=exam.id)
+
+    if session.status == 'ongoing' and session.end_time and not request.session.get(f'assessment_started_{session.id}'):
+        session.end_time = None
+        session.save(update_fields=['end_time'])
+
+    exam_not_started = not session.end_time
+    if exam_not_started:
+        return render(request, 'take_quiz.html', {
+            'questions': questions,
+            'exam_title': exam.title,
+            'session': session,
+            'remaining_time': exam.duration_minutes * 60,
+            'exam_not_started': True,
+        })
 
     remaining_time = (session.end_time - timezone.now()).total_seconds()
 
     # 3. GRADING & SUBMISSION LOGIC
-    if request.method == 'POST' or remaining_time <= 0:
+    if (request.method == 'POST' and request.POST.get('action') != 'start_assessment') or remaining_time <= 0:
         from .models import StudentAnswer
         total_score = 0
         max_possible = sum(q.points for q in questions)
@@ -632,7 +738,8 @@ def start_exam(request, exam_id):
         'questions': questions, 
         'exam_title': exam.title,
         'session': session,
-        'remaining_time': int(remaining_time)
+        'remaining_time': int(remaining_time),
+        'exam_not_started': False,
     })
 
 # ==================================================================
@@ -647,6 +754,11 @@ from django.core.files.base import ContentFile
 from django.core.cache import cache
 from .models import QuizSession, ProctoringLog
 
+try:
+    from ultralytics import YOLO
+except Exception:
+    YOLO = None
+
 # 🚀 Load OpenCV AI Models globally to make it super fast
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 alt_face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml')
@@ -657,37 +769,171 @@ eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml
 hog = cv2.HOGDescriptor()
 hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
+YOLO_MODEL = None
+YOLO_MODEL_PATH = str(settings.BASE_DIR / 'yolov8n.pt')
+YOLO_PERSON_CLASS_ID = 0
+YOLO_PHONE_CLASS_ID = 67
+YOLO_PERSON_CONFIDENCE = 0.50
+YOLO_PHONE_CONFIDENCE = 0.35
+
+
+FRAME_CONFIRMATION_RULES = {
+    'phone_detected': {'needed': 2, 'timeout': 20},
+    'multi_face': {'needed': 2, 'timeout': 20},
+    'no_face': {'needed': 3, 'timeout': 25},
+    'head_pose': {'needed': 3, 'timeout': 25},
+    'gaze_deviation': {'needed': 4, 'timeout': 25},
+}
+
+EVENT_CONFIRMATION_RULES = {
+    'tab_switch': {'needed': 1, 'timeout': 15},
+    'window_blur': {'needed': 2, 'timeout': 10},
+    'camera_stalled': {'needed': 2, 'timeout': 20},
+}
+
+
+def _rect_overlap_ratio(a, b):
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    x1 = max(ax, bx)
+    y1 = max(ay, by)
+    x2 = min(ax + aw, bx + bw)
+    y2 = min(ay + ah, by + bh)
+    overlap = max(0, x2 - x1) * max(0, y2 - y1)
+    smaller_area = max(1, min(aw * ah, bw * bh))
+    return overlap / smaller_area
+
+
+def _dedupe_boxes(boxes, overlap_threshold=0.35):
+    kept = []
+    for box in sorted(boxes, key=lambda item: item[2] * item[3], reverse=True):
+        if all(_rect_overlap_ratio(box, existing) < overlap_threshold for existing in kept):
+            kept.append(box)
+    return kept
+
+
+def _frame_is_usable(gray_frame):
+    brightness = float(np.mean(gray_frame))
+    contrast = float(np.std(gray_frame))
+    return 35 <= brightness <= 225 and contrast >= 18
+
+
+def _get_yolo_model():
+    global YOLO_MODEL
+    if YOLO is None:
+        return None
+    if YOLO_MODEL is None:
+        try:
+            YOLO_MODEL = YOLO(YOLO_MODEL_PATH)
+        except Exception as exc:
+            print("YOLO load error:", exc)
+            YOLO_MODEL = False
+    return YOLO_MODEL if YOLO_MODEL is not False else None
+
+
+def _detect_yolo_objects(frame):
+    model = _get_yolo_model()
+    if model is None:
+        return [], []
+
+    try:
+        results = model.predict(
+            frame,
+            imgsz=416,
+            conf=min(YOLO_PHONE_CONFIDENCE, YOLO_PERSON_CONFIDENCE),
+            classes=[YOLO_PERSON_CLASS_ID, YOLO_PHONE_CLASS_ID],
+            verbose=False,
+            device='cpu',
+        )
+    except Exception as exc:
+        print("YOLO detection error:", exc)
+        return [], []
+
+    person_boxes = []
+    phone_boxes = []
+    if not results:
+        return person_boxes, phone_boxes
+
+    boxes = results[0].boxes
+    if boxes is None:
+        return person_boxes, phone_boxes
+
+    for box in boxes:
+        class_id = int(box.cls[0])
+        confidence = float(box.conf[0])
+        x1, y1, x2, y2 = [int(value) for value in box.xyxy[0]]
+        detected_box = (x1, y1, max(1, x2 - x1), max(1, y2 - y1), confidence)
+
+        if class_id == YOLO_PERSON_CLASS_ID and confidence >= YOLO_PERSON_CONFIDENCE:
+            person_boxes.append(detected_box)
+        elif class_id == YOLO_PHONE_CLASS_ID and confidence >= YOLO_PHONE_CONFIDENCE:
+            phone_boxes.append(detected_box)
+
+    return person_boxes, phone_boxes
+
+
+def _phone_is_near_person_or_face(phone_box, person_boxes, face_boxes):
+    px, py, pw, ph, _ = phone_box
+    phone_rect = (px, py, pw, ph)
+    for fx, fy, fw, fh in face_boxes:
+        near_face_x = fx - 160 <= px <= fx + fw + 160
+        near_face_y = fy - 60 <= py <= fy + fh + 200
+        if near_face_x and near_face_y:
+            return True
+    for bx, by, bw, bh, _ in person_boxes:
+        inside_person_x = bx - 40 <= px <= bx + bw + 40
+        inside_person_y = by - 40 <= py <= by + bh + 40
+        if inside_person_x and inside_person_y:
+            return True
+    return False
+
+
+def _cache_latest_frame_snapshot(session_id, frame):
+    ok, buffer = cv2.imencode('.jpg', frame)
+    if ok:
+        cache.set(f'proctor_latest_frame_{session_id}', buffer.tobytes(), timeout=180)
+
+
+def _get_latest_frame_snapshot_file(session_id):
+    img_bytes = cache.get(f'proctor_latest_frame_{session_id}')
+    if not img_bytes:
+        return None
+    return ContentFile(
+        img_bytes,
+        name=f"event_evidence_{session_id}_{int(np.random.rand() * 100000)}.jpg",
+    )
+
 
 def _detect_faces(gray_frame):
     """
     Cascade ensemble with eye-validation to drop false positives
     (e.g., phones or background mistaken as faces).
     """
+    frame_h, frame_w = gray_frame.shape[:2]
     cascades = (face_cascade, alt_face_cascade, profile_face_cascade)
+    all_faces = []
     for cascade in cascades:
         faces = cascade.detectMultiScale(
             gray_frame,
-            scaleFactor=1.05,
-            minNeighbors=4,
-            minSize=(60, 60)
+            scaleFactor=1.08,
+            minNeighbors=5,
+            minSize=(70, 70)
         )
-        filtered = []
         for (x, y, w, h) in faces:
-            # Reject very small detections
-            if w < 60 or h < 60:
+            area_ratio = (w * h) / float(frame_w * frame_h)
+            aspect = w / float(h) if h else 0
+            if area_ratio < 0.015 or area_ratio > 0.45 or not 0.65 <= aspect <= 1.35:
                 continue
             roi = gray_frame[y:y+h, x:x+w]
             eyes = eye_cascade.detectMultiScale(
-                roi, scaleFactor=1.1, minNeighbors=4, minSize=(12, 12)
+                roi, scaleFactor=1.1, minNeighbors=5, minSize=(14, 14)
             )
-            # Keep only detections that contain eyes to avoid counting phones/objects as faces
+            upper_y = y + int(h * 0.65)
             if len(eyes) > 0:
-                filtered.append((x, y, w, h))
-        if filtered:
-            return filtered
-        if len(faces) > 0:
-            return list(faces)
-    return []
+                all_faces.append((x, y, w, h))
+            elif y < upper_y and area_ratio >= 0.035:
+                all_faces.append((x, y, w, h))
+    return _dedupe_boxes(all_faces)
 
 
 def _detect_people(frame):
@@ -696,7 +942,16 @@ def _detect_people(frame):
     even if faces are not picked up by cascades.
     """
     people, weights = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
-    return people, weights
+    filtered = []
+    filtered_weights = []
+    frame_area = frame.shape[0] * frame.shape[1]
+    for person, weight in zip(people, weights):
+        x, y, w, h = person
+        area_ratio = (w * h) / float(frame_area)
+        if area_ratio >= 0.08 and weight >= 0.45:
+            filtered.append((x, y, w, h))
+            filtered_weights.append(float(weight))
+    return filtered, filtered_weights
 
 
 def _detect_phone(frame, face_boxes):
@@ -713,24 +968,22 @@ def _detect_phone(frame, face_boxes):
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area < 0.005 * frame_area or area > 0.08 * frame_area:
+        if area < 0.006 * frame_area or area > 0.055 * frame_area:
             continue
 
         approx = cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True)
-        if 4 <= len(approx) <= 8:
+        if 4 <= len(approx) <= 6:
             x, y, w, h = cv2.boundingRect(approx)
             aspect = w / float(h) if h else 0
-            # Typical phone aspect ratio when held vertically
-            if 0.45 <= aspect <= 0.8:
-                # If we have a face, require the phone to be near it; otherwise accept.
+            fill_ratio = area / float(max(1, w * h))
+            if 0.38 <= aspect <= 0.82 and 0.55 <= fill_ratio <= 1.05:
                 if face_boxes:
                     for (fx, fy, fw, fh) in face_boxes:
-                        if (fx - 80 <= x <= fx + fw + 80) and (fy - 40 <= y <= fy + fh + 120):
+                        near_face_x = fx - 120 <= x <= fx + fw + 120
+                        near_face_y = fy - 30 <= y <= fy + fh + 160
+                        away_from_face_center = _rect_overlap_ratio((x, y, w, h), (fx, fy, fw, fh)) < 0.25
+                        if near_face_x and near_face_y and away_from_face_center:
                             return True, (x, y, w, h)
-                else:
-                    # Fall back: only consider phones in the upper half of the frame
-                    if y < frame.shape[0] * 0.7:
-                        return True, (x, y, w, h)
     return False, None
 
 
@@ -763,21 +1016,24 @@ def _log_proctoring_violation(session, violation_type, confidence, frame=None, l
     return True
 
 
-def _should_log_frame_violation(session_id, violation_type):
-    immediate_types = {'multi_face', 'phone_detected'}
-    if violation_type in immediate_types:
-        cache.delete(f'proctor_clean_{session_id}')
-        return True
-
+def _should_log_confirmed_violation(session_id, violation_type, rules):
+    rule = rules.get(violation_type, {'needed': 2, 'timeout': 20})
     key = f'proctor_violation_{session_id}_{violation_type}'
     count = cache.get(key, 0) + 1
-    cache.set(key, count, timeout=30)
-    return count >= 2
+    cache.set(key, count, timeout=rule['timeout'])
+    if count >= rule['needed']:
+        cache.delete(key)
+        return True
+    return False
 
 
 def _reset_frame_violation_state(session_id):
-    for violation_type in ('no_face', 'gaze_deviation', 'head_pose'):
+    for violation_type in FRAME_CONFIRMATION_RULES:
         cache.delete(f'proctor_violation_{session_id}_{violation_type}')
+
+
+def _reset_event_state(session_id, event_type):
+    cache.delete(f'proctor_violation_{session_id}_{event_type}')
 
 def process_quiz_frame(request, session_id):
     if request.method == 'POST':
@@ -796,7 +1052,29 @@ def process_quiz_frame(request, session_id):
                     return JsonResponse({'status': 'ignored', 'violation': False})
 
                 violation_type, confidence, message = allowed_events[event_type]
-                logged = _log_proctoring_violation(session, violation_type, confidence)
+                if not _should_log_confirmed_violation(session.id, event_type, EVENT_CONFIRMATION_RULES):
+                    return JsonResponse({
+                        'status': 'success',
+                        'violation': False,
+                        'type': violation_type,
+                        'message': 'Browser event observed; waiting for confirmation.',
+                    })
+
+                _reset_event_state(session.id, event_type)
+                evidence_file = _get_latest_frame_snapshot_file(session.id)
+                if evidence_file is not None:
+                    ProctoringLog.objects.create(
+                        session=session,
+                        violation_type=violation_type,
+                        confidence_score=confidence,
+                        evidence_image=evidence_file,
+                    )
+                    if session.status != 'flagged':
+                        session.status = 'flagged'
+                        session.save(update_fields=['status'])
+                    logged = True
+                else:
+                    logged = _log_proctoring_violation(session, violation_type, confidence)
                 return JsonResponse({
                     'status': 'success',
                     'violation': logged,
@@ -820,8 +1098,9 @@ def process_quiz_frame(request, session_id):
                     return JsonResponse({'status': 'error', 'message': 'Invalid frame'}, status=400)
 
                 frame = cv2.resize(frame, (640, 480))
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                gray = cv2.equalizeHist(gray)
+                _cache_latest_frame_snapshot(session.id, frame)
+                raw_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray = cv2.equalizeHist(raw_gray)
 
                 # ==========================================================
                 # 🚀 ADVANCED BEHAVIOUR ANALYSIS ENGINE
@@ -834,9 +1113,37 @@ def process_quiz_frame(request, session_id):
                 faces = _detect_faces(gray)
                 people, people_weights = _detect_people(frame)
                 phone_found, phone_box = _detect_phone(frame, faces)
+                yolo_people, yolo_phones = _detect_yolo_objects(frame)
+                yolo_phone = next(
+                    (
+                        phone
+                        for phone in yolo_phones
+                        if phone[4] >= 0.50 or _phone_is_near_person_or_face(phone, yolo_people, faces)
+                    ),
+                    None,
+                )
+                frame_usable = _frame_is_usable(raw_gray)
 
-                # 1) CLEAR MULTI-FACE (only if real face detections >1)
-                if len(faces) > 1:
+                # 1) YOLO phone detection is more reliable than shape guessing.
+                if yolo_phone:
+                    violation_detected = True
+                    violation_type = 'phone_detected'
+                    confidence = round(yolo_phone[4], 2)
+                    px, py, pw, ph, _ = yolo_phone
+                    cv2.rectangle(frame, (px, py), (px+pw, py+ph), (0, 0, 255), 3)
+                    cv2.putText(frame, "ALERT: PHONE DETECTED", (px, max(30, py-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
+                # 2) YOLO person count handles multiple people better than face cascades.
+                elif len(yolo_people) > 1:
+                    violation_detected = True
+                    violation_type = 'multi_face'
+                    confidence = round(max(person[4] for person in yolo_people), 2)
+                    cv2.putText(frame, "ALERT: MULTIPLE PERSONS", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                    for (x, y, w, h, _) in yolo_people:
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 3)
+
+                # 3) CLEAR MULTI-FACE (only if real face detections >1)
+                elif len(faces) > 1:
                     violation_detected = True
                     violation_type = 'multi_face'
                     confidence = 0.96
@@ -844,7 +1151,7 @@ def process_quiz_frame(request, session_id):
                     for (x, y, w, h) in faces:
                         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 3)
 
-                # 2) PHONE DETECTED (check before gaze to avoid false multi-face)
+                # 4) Fallback phone heuristic when YOLO misses a very obvious phone.
                 elif phone_found:
                     violation_detected = True
                     violation_type = 'phone_detected'
@@ -853,9 +1160,14 @@ def process_quiz_frame(request, session_id):
                     cv2.rectangle(frame, (px, py), (px+pw, py+ph), (0, 0, 255), 3)
                     cv2.putText(frame, "ALERT: PHONE DETECTED", (px, max(30, py-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-                # 3) NO FACE FOUND
+                # 5) NO FACE FOUND
                 elif len(faces) == 0:
-                    if len(people) > 1:
+                    if not frame_usable:
+                        violation_detected = True
+                        violation_type = 'no_face'
+                        confidence = 0.70
+                        cv2.putText(frame, "WEBCAM QUALITY TOO LOW", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
+                    elif len(people) > 1:
                         violation_detected = True
                         violation_type = 'multi_face'
                         confidence = float(np.clip(max(people_weights, default=0.9), 0.75, 0.95))
@@ -881,11 +1193,19 @@ def process_quiz_frame(request, session_id):
                     roi_gray = gray[y:y+h, x:x+w] # Focus AI only on the face area
                     
                     eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.1, minNeighbors=5, minSize=(15, 15))
+                    face_center_x = x + (w / 2)
+                    face_center_y = y + (h / 2)
+                    looking_edge = (
+                        face_center_x < frame.shape[1] * 0.22 or
+                        face_center_x > frame.shape[1] * 0.78 or
+                        face_center_y < frame.shape[0] * 0.18 or
+                        face_center_y > frame.shape[0] * 0.78
+                    )
                     
-                    if len(eyes) == 0:
+                    if len(eyes) == 0 and looking_edge:
                         violation_detected = True
                         violation_type = 'gaze_deviation'
-                        confidence = 0.85
+                        confidence = 0.78
                         
                         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 165, 255), 3) # Orange box
                         cv2.putText(frame, "LOOKING AWAY / PHONE", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
@@ -901,7 +1221,7 @@ def process_quiz_frame(request, session_id):
                         'head_pose': 'Face hidden or angled repeatedly',
                         'phone_detected': 'Phone detected in frame',
                     }
-                    if _should_log_frame_violation(session.id, violation_type):
+                    if _should_log_confirmed_violation(session.id, violation_type, FRAME_CONFIRMATION_RULES):
                         logged = _log_proctoring_violation(session, violation_type, confidence, frame=frame)
                         return JsonResponse({
                             'status': 'success',
@@ -1024,6 +1344,23 @@ def instructor_dashboard(request):
     quiz_sessions = QuizSession.objects.exclude(status='ongoing').order_by('-start_time')
     examiners = User.objects.filter(is_examiner=True).order_by('-date_joined')
 
+    # Add Revenue calculations and Seaborn chart generation
+    from courses.models import Payment
+    from courses.utils import generate_revenue_chart
+    from django.db.models import Sum
+
+    revenue_agg = Payment.objects.filter(status='completed').aggregate(total=Sum('amount'))
+    total_revenue = float(revenue_agg['total'] or 0.0)
+    total_sales = Payment.objects.filter(status='completed').count()
+    recent_sales = Payment.objects.filter(status='completed').select_related('student', 'course').order_by('-payment_date')[:10]
+
+    chart_url = ""
+    try:
+        chart_url = generate_revenue_chart()
+    except Exception as e:
+        print(f"Error generating Seaborn revenue chart: {e}")
+
+    from .forms import CourseForm
     context = {
         'courses': courses,
         'total_students': total_students_count,
@@ -1031,12 +1368,54 @@ def instructor_dashboard(request):
         'recent_activity': recent_activity,
         'quiz_sessions': quiz_sessions, 
         'examiners': examiners,
+        'total_revenue': total_revenue,
+        'total_sales': total_sales,
+        'recent_sales': recent_sales,
+        'chart_url': chart_url,
+        'course_form': CourseForm(),
     }
     return render(request, 'dashboard.html', context)
 
+
+@user_passes_test(is_admin)
+def toggle_portal_user_status(request, user_id):
+    portal_user = get_object_or_404(User, id=user_id, is_superuser=False)
+    target_tab = '/dashboard/#students' if portal_user.is_student else '/dashboard/#examiners'
+    if request.method != 'POST':
+        return redirect(target_tab)
+
+    if portal_user.id == request.user.id:
+        messages.error(request, "You cannot block your own account.")
+        return redirect(target_tab)
+
+    portal_user.is_active = not portal_user.is_active
+    portal_user.save(update_fields=['is_active'])
+
+    status = "activated" if portal_user.is_active else "blocked"
+    messages.success(request, f"{portal_user.username} has been {status}.")
+    return redirect(target_tab)
+
+
+@user_passes_test(is_admin)
+def delete_portal_user(request, user_id):
+    portal_user = get_object_or_404(User, id=user_id, is_superuser=False)
+    target_tab = '/dashboard/#students' if portal_user.is_student else '/dashboard/#examiners'
+    if request.method != 'POST':
+        return redirect(target_tab)
+
+    if portal_user.id == request.user.id:
+        messages.error(request, "You cannot delete your own account.")
+        return redirect(target_tab)
+
+    username = portal_user.username
+    portal_user.delete()
+    messages.success(request, f"{username} has been deleted.")
+    return redirect(target_tab)
+
+
 @user_passes_test(is_admin)
 def admin_proctoring_dashboard(request):
-    sessions = QuizSession.objects.exclude(status='ongoing').prefetch_related('proctoring_logs').order_by('-start_time')
+    sessions = QuizSession.objects.prefetch_related('proctoring_logs').order_by('-start_time')
     for session in sessions:
         session.risk_report = calculate_risk_report(session.proctoring_logs.all())
     return render(request, 'admin_proctoring_dashboard.html', {'sessions': sessions})
@@ -1077,10 +1456,21 @@ def create_course(request):
         form = CourseForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            return redirect('instructor_dashboard')
+            return redirect('/dashboard/#content')
     else:
         form = CourseForm()
     return render(request, 'create_course.html', {'form': form})
+
+@user_passes_test(is_admin)
+def edit_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if request.method == 'POST':
+        form = CourseForm(request.POST, request.FILES, instance=course)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Course '{course.title}' updated successfully.")
+            return redirect('/dashboard/#content')
+    return redirect('/dashboard/#content')
 
 @user_passes_test(is_admin)
 def add_video(request, course_id):
@@ -1091,7 +1481,7 @@ def add_video(request, course_id):
             video = form.save(commit=False)
             video.course = course
             video.save()
-            return redirect('instructor_dashboard')
+            return redirect('/dashboard/#content')
     else:
         form = VideoForm()
     return render(request, 'add_video.html', {'form': form, 'course': course})
@@ -1108,7 +1498,7 @@ def add_quiz(request, video_id):
             if 'save_and_add' in request.POST:
                 return redirect('add_quiz', video_id=video.id)
             else:
-                return redirect('instructor_dashboard')
+                return redirect('/dashboard/#content')
     else:
         form = QuizForm()
     return render(request, 'add_quiz.html', {'form': form, 'video': video})
@@ -1120,7 +1510,7 @@ def edit_video(request, video_id):
         form = VideoForm(request.POST, request.FILES, instance=video)
         if form.is_valid():
             form.save()
-            return redirect('instructor_dashboard')
+            return redirect('/dashboard/#content')
     else:
         form = VideoForm(instance=video)
     return render(request, 'add_video.html', {'form': form, 'course': video.course, 'is_edit': True})
@@ -1129,7 +1519,7 @@ def edit_video(request, video_id):
 def delete_video(request, video_id):
     video = get_object_or_404(Video, id=video_id)
     video.delete()
-    return redirect('instructor_dashboard')
+    return redirect('/dashboard/#content')
 
 @user_passes_test(is_admin)
 def delete_quiz(request, quiz_id):
@@ -1158,11 +1548,11 @@ def student_detail(request, student_id):
 def remove_student(request, student_id):
     student = get_object_or_404(User, id=student_id, is_superuser=False)
     student.delete()
-    return redirect('instructor_dashboard')
+    return redirect('/dashboard/#students')
 
 @user_passes_test(is_admin)
 def delete_student(request, student_id):
     student = get_object_or_404(User, id=student_id)
     if not student.is_superuser: 
         student.delete()
-    return redirect('instructor_dashboard')
+    return redirect('/dashboard/#students')

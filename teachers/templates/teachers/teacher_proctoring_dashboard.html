@@ -143,7 +143,7 @@
                         <tr>
                             <th>Student</th>
                             <th>Type</th>
-                            <th>Subject / Course</th>
+                            <th>Subject</th>
                             <th class="text-center">Score</th>
                             <th>Integrity Status</th>
                             <th>Risk</th>
@@ -173,14 +173,18 @@
                                 </small>
                             </td>
                             <td class="text-center">
-                                {% if not session.is_reviewed %}
+                                {% if session.status == 'ongoing' %}
+                                    <span class="badge bg-info bg-opacity-10 text-info px-2 rounded-pill small">Live Now</span>
+                                {% elif not session.is_reviewed %}
                                     <span class="badge bg-warning bg-opacity-10 text-warning px-2 rounded-pill small">Evaluation Required</span>
                                 {% else %}
                                     <h6 class="mb-0 fw-bold">{{ session.score|floatformat:0 }}%</h6>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if session.status == 'flagged' %}
+                                {% if session.status == 'ongoing' %}
+                                    <span class="badge bg-info rounded-pill px-3 shadow-sm">In Progress</span>
+                                {% elif session.status == 'flagged' %}
                                     <span class="badge bg-danger rounded-pill px-3 shadow-sm">Suspicious Activity</span>
                                 {% elif session.status == 'disqualified' %}
                                     <span class="badge bg-dark rounded-pill px-3">Invalidated</span>
@@ -198,7 +202,11 @@
                                 <div class="small text-muted">{{ session.risk_report.total_events }} event{{ session.risk_report.total_events|pluralize }}</div>
                             </td>
                             <td class="text-end">
-                                {% if session.exam %}
+                                {% if session.status == 'ongoing' %}
+                                    <a href="{% url 'teacher_review_exam' session.id %}" class="btn btn-outline-danger rounded-pill px-4 fw-bold">
+                                        Live Evidence
+                                    </a>
+                                {% elif session.exam %}
                                     <a href="{% url 'grade_exam_session' session.id %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
                                         {% if session.is_reviewed %}Review Grade{% else %}Evaluate & Grade{% endif %}
                                     </a>
@@ -213,7 +221,7 @@
                         <tr>
                             <td colspan="7" class="text-center text-muted py-5">
                                 <i class="fa-solid fa-inbox display-6 d-block mb-3 opacity-25"></i>
-                                No completed assessment sessions found for your students.
+                                No assessment sessions found for your students.
                             </td>
                         </tr>
                         {% endfor %}

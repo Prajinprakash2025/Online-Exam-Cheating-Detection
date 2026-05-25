@@ -1,12 +1,81 @@
 {% extends 'base.html' %}
 
+{% block footer %}{% endblock %}
+
 {% block content %}
 <style>
     /* VARIABLES */
     :root {
         --primary-purple: #8e44ad;
         --primary-dark: #2c3e50;
-        --bg-cream: #f3f4f6;
+        --bg-cream: #f4f6f9;
+        --sidebar-width: 280px;
+    }
+
+    #dashboard-wrapper {
+        display: flex;
+        min-height: calc(100vh - 76px);
+        background-color: var(--bg-cream);
+    }
+
+    #sidebar {
+        min-width: var(--sidebar-width);
+        max-width: var(--sidebar-width);
+        background: white;
+        transition: all 0.3s ease-in-out;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        z-index: 1000;
+        position: sticky;
+        top: 76px;
+        height: calc(100vh - 76px);
+        overflow-y: auto;
+    }
+
+    .sidebar-heading {
+        padding: 1.5rem 1.5rem;
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #adb5bd;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .sidebar-link {
+        color: var(--primary-dark);
+        font-weight: 600;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+        border-left: 4px solid transparent;
+    }
+
+    .sidebar-link:hover {
+        background-color: var(--bg-cream);
+        color: var(--primary-purple);
+    }
+
+    .sidebar-link.active {
+        background-color: rgba(142, 68, 173, 0.08);
+        color: var(--primary-purple);
+        border-left: 4px solid var(--primary-purple);
+    }
+
+    #page-content {
+        width: 100%;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .dashboard-topbar {
+        background: white;
+        padding: 1rem 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     /* FORM STYLING */
@@ -69,68 +138,107 @@
     }
 </style>
 
-<div class="py-5" style="background-color: var(--bg-cream); min-height: 100vh;">
-    <div class="container">
-        
-        <div class="row justify-content-center mb-4">
-            <div class="col-lg-6">
-                <a href="{% url 'instructor_dashboard' %}" class="text-decoration-none fw-bold text-muted mb-3 d-inline-block">
-                    <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
-                </a>
+<div id="dashboard-wrapper">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="sidebar-heading mt-2">Main Menu</div>
+        <div class="list-group list-group-flush">
+            <a href="/dashboard/#overview" class="sidebar-link">
+                <i class="fa-solid fa-chart-pie" style="width: 20px;"></i> Overview
+            </a>
+            <a href="/dashboard/#content" class="sidebar-link active">
+                <i class="fa-solid fa-file-invoice" style="width: 20px;"></i> Courses
+            </a>
+            <a href="/dashboard/#exams" class="sidebar-link">
+                <i class="fa-solid fa-shield-halved" style="width: 20px;"></i> Proctored Sessions
+            </a>
+            <a href="/dashboard/#examiners" class="sidebar-link">
+                <i class="fa-solid fa-user-tie" style="width: 20px;"></i> Conductors
+            </a>
+            <a href="/dashboard/#students" class="sidebar-link">
+                <i class="fa-solid fa-users" style="width: 20px;"></i> Candidate Registry
+            </a>
+            <a href="/dashboard/#access" class="sidebar-link">
+                <i class="fa-solid fa-unlock-keyhole" style="width: 20px;"></i> Course Access
+            </a>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div id="page-content">
+        <div class="dashboard-topbar shadow-sm">
+            <div class="d-flex align-items-center gap-3">
+                <h4 class="mb-0 fw-bolder" style="color: var(--primary-dark);">ExamGate <span style="color: var(--primary-purple);">Admin</span></h4>
             </div>
         </div>
 
-        <div class="row justify-content-center">
-            <div class="col-lg-6">
-                
-                <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
-                    <div class="card-header bg-white p-4 text-center border-0">
-                        <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
-                            <i class="fa-solid fa-rocket fs-2" style="color: var(--primary-purple);"></i>
-                        </div>
-                        <h4 class="fw-bold mb-1" style="color: var(--primary-dark);">Launch New Course</h4>
-                        <p class="text-muted small mb-0">Create a space for your students to learn.</p>
-                    </div>
-
-                    <div class="card-body p-4 p-md-5 pt-0">
-                        <form method="post" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            
-                            <div class="mb-4">
-                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Course Title</label>
-                                {{ form.title }}
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Description</label>
-                                {{ form.description }}
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Course Thumbnail</label>
-                                <div class="upload-area p-4 text-center">
-                                    <div class="mb-3">
-                                        <i class="fa-regular fa-image fs-1 text-muted opacity-50"></i>
-                                    </div>
-                                    {{ form.thumbnail }}
-                                    <small class="d-block text-muted mt-3" style="font-size: 0.75rem;">
-                                        Recommended size: 1280x720 (JPG, PNG)
-                                    </small>
-                                </div>
-                            </div>
-
-                            <div class="d-grid gap-2 mt-5">
-                                <button type="submit" class="btn btn-custom rounded-pill py-3 fw-bold shadow-sm">
-                                    <i class="fa-solid fa-plus me-2"></i> Create Course
-                                </button>
-                                <a href="{% url 'instructor_dashboard' %}" class="btn btn-light rounded-pill py-3 fw-bold">
-                                    Cancel
-                                </a>
-                            </div>
-                        </form>
-                    </div>
+        <div class="p-4 p-md-5">
+            
+            <div class="row justify-content-center mb-4">
+                <div class="col-lg-6">
+                    <a href="/dashboard/#content" class="text-decoration-none fw-bold text-muted mb-3 d-inline-block">
+                        <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+                    </a>
                 </div>
+            </div>
 
+            <div class="row justify-content-center">
+                <div class="col-lg-6">
+                    
+                    <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-5">
+                        <div class="card-header bg-white p-4 text-center border-0">
+                            <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                                <i class="fa-solid fa-rocket fs-2" style="color: var(--primary-purple);"></i>
+                            </div>
+                            <h4 class="fw-bold mb-1" style="color: var(--primary-dark);">Launch New Course</h4>
+                            <p class="text-muted small mb-0">Create a space for your students to learn.</p>
+                        </div>
+
+                        <div class="card-body p-4 p-md-5 pt-0">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                <div class="mb-4">
+                                    <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Course Title</label>
+                                    {{ form.title }}
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Description</label>
+                                    {{ form.description }}
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Course Price (₹)</label>
+                                    {{ form.price }}
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="small fw-bold text-muted mb-2 text-uppercase ls-1">Course Thumbnail</label>
+                                    <div class="upload-area p-4 text-center">
+                                        <div class="mb-3">
+                                            <i class="fa-regular fa-image fs-1 text-muted opacity-50"></i>
+                                        </div>
+                                        {{ form.thumbnail }}
+                                        <small class="d-block text-muted mt-3" style="font-size: 0.75rem;">
+                                            Recommended size: 1280x720 (JPG, PNG)
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2 mt-5">
+                                    <button type="submit" class="btn btn-custom rounded-pill py-3 fw-bold shadow-sm">
+                                        <i class="fa-solid fa-plus me-2"></i> Create Course
+                                    </button>
+                                    <a href="/dashboard/#content" class="btn btn-light rounded-pill py-3 fw-bold">
+                                        Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --bg-cream: #f3f4f6;
+    }
+
+    .faq-hero {
+        background-color: var(--bg-cream);
+        padding: 5rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .faq-card {
+        border-radius: 24px;
+        background: white;
+        border: 1px solid #eef2f6;
+    }
+
+    .accordion-button:not(.collapsed) {
+        background-color: rgba(142, 68, 173, 0.05) !important;
+        color: var(--primary-purple) !important;
+        box-shadow: none !important;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none !important;
+        border-color: rgba(142, 68, 173, 0.2) !important;
+    }
+
+    .accordion-item {
+        border-radius: 16px !important;
+        border: 1px solid #eef2f6 !important;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+</style>
+
+<div class="faq-hero mb-5">
+    <div class="container text-center">
+        <span class="badge bg-white text-dark shadow-sm rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase ls-1">
+            <i class="fa-solid fa-circle-question text-primary me-2"></i> Support Hub
+        </span>
+        <h1 class="fw-bold display-4 mb-3 text-dark">Frequently Asked Questions</h1>
+        <p class="text-muted lead mb-0 mx-auto" style="max-width: 600px;">
+            Clear, straightforward answers about exam scheduling, webcam proctoring, and student enrollments.
+        </p>
+    </div>
+</div>
+
+<div class="container py-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="faq-card p-4 p-md-5 shadow-sm">
+                
+                <div class="accordion accordion-flush" id="faqAccordion">
+                    
+                    <!-- FAQ 1 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button fw-bold text-dark collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false">
+                                <i class="fa-solid fa-shield-halved text-primary me-2 fs-5"></i> How does the AI proctoring system work?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted" style="line-height: 1.8;">
+                                When you begin an exam session, clientside javascript monitors face presence, browser tab switches, and window focus activity. If a threshold is crossed, a local snapshot is securely uploaded to the Examiner’s dashboard as a flagged event.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FAQ 2 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button fw-bold text-dark collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false">
+                                <i class="fa-solid fa-camera text-primary me-2 fs-5"></i> Is my raw video stream recorded or sent to the server?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted" style="line-height: 1.8;">
+                                <strong>No.</strong> Your real-time video feed remains entirely within your local browser memory to ensure privacy. The system does not stream video to our servers. Only tiny, low-resolution event snapshots are sent when anomalies are detected, keeping database storage minimal and user privacy secure.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FAQ 3 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button fw-bold text-dark collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false">
+                                <i class="fa-solid fa-triangle-exclamation text-primary me-2 fs-5"></i> What happens if I am flagged during an exam?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted" style="line-height: 1.8;">
+                                If you are flagged, your session is not automatically terminated. Instead, a risk score is calculated and listed on the Teacher and Conductor dashboards. Your instructor will review the snapshots manually to make a final decision, ensuring automated flags do not result in unfair penalties.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FAQ 4 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFour">
+                            <button class="accordion-button fw-bold text-dark collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false">
+                                <i class="fa-solid fa-right-to-bracket text-primary me-2 fs-5"></i> How do I request access to subjects or exams?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted" style="line-height: 1.8;">
+                                Candidates can browse subjects on the landing page or Subject Explorer. Click "Enroll Free" (for free subjects) or "Buy Subject" (for paid certifications). If approval is needed, the request is routed directly to the Examiner, who will assign exams to your profile.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FAQ 5 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFive">
+                            <button class="accordion-button fw-bold text-dark collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false">
+                                <i class="fa-solid fa-user-xmark text-primary me-2 fs-5"></i> Can I delete my proctoring data?
+                            </button>
+                        </h2>
+                        <div id="collapseFive" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted" style="line-height: 1.8;">
+                                Yes. Once an exam result is reviewed and finalized by the teaching staff, the associated snapshot logs are automatically cleaned up in accordance with our data policy. Students may also request complete profile data erasure by contacting their managing Conductor or organization administrator.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

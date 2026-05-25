@@ -83,6 +83,77 @@
         box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
         height: 100%;
     }
+
+    /* HERO IMAGE AND PORTALS Overhaul */
+    .hero-image-wrapper {
+        position: relative;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(142, 68, 173, 0.15);
+        border: 4px solid white;
+        transition: transform 0.5s ease;
+        animation: floatImage 6s ease-in-out infinite;
+    }
+    
+    .hero-image-wrapper:hover {
+        transform: scale(1.02) rotate(1deg);
+    }
+    
+    @keyframes floatImage {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    
+    .portals-section {
+        background: linear-gradient(180deg, var(--bg-cream) 0%, #ffffff 100%);
+    }
+    
+    .portal-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(142, 68, 173, 0.1);
+        border-radius: 24px;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    
+    .portal-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(142, 68, 173, 0.12) !important;
+        border-color: rgba(142, 68, 173, 0.3);
+    }
+    
+    /* Subject List Style (List, not Card) */
+    .subject-list-item {
+        background: white;
+        border: 1px solid #eef2f6;
+        border-radius: 20px;
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    
+    .subject-list-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(142, 68, 173, 0.08);
+        border-color: rgba(142, 68, 173, 0.2);
+    }
+    
+    .subject-icon-box {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        background: linear-gradient(135deg, #8e44ad 0%, #a29bfe 100%);
+    }
+    
+    .lesson-badge {
+        background-color: rgba(142, 68, 173, 0.08);
+        color: var(--primary-purple);
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
 </style>
 
 {% if user.is_authenticated %}
@@ -174,97 +245,211 @@
 </div>
 {% else %}
 
-<div class="hero-section py-5 mb-5">
-    <div class="container py-5 text-center position-relative" style="z-index: 2;">
-        
-        <span class="badge bg-white text-dark shadow-sm rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase ls-1">
-            <i class="fa-solid fa-shield-halved text-primary me-2"></i> Trusted AI Proctoring
-        </span>
-        
-        <h1 class="display-3 fw-bolder mb-3 text-dark" style="line-height: 1.1;">
-            Secure Your Certification with <br> 
-            <span style="color: var(--primary-purple);">Professional</span> Conductors
-        </h1>
-        
-        <p class="lead text-muted mb-5 mx-auto opacity-75" style="max-width: 600px;">
-            The industry-leading AI-monitored exam portal. Get certified through our network of verified examiners and secure behavior-tracking technology.
-        </p>
-        
-        <div class="d-flex justify-content-center gap-3 mb-5">
-            {% if not user.is_authenticated %}
-            <a href="{% url 'login' %}" class="btn btn-custom btn-lg rounded-pill px-5 fw-bold shadow-sm">
-                Access Your Exams <i class="fa-solid fa-right-to-bracket ms-2"></i>
-            </a>
-            <a href="{% url 'examiner_signup' %}" class="btn btn-outline-custom btn-lg rounded-pill px-5 fw-bold">
-                Join as Conductor
-            </a>
-            {% else %}
-            <a href="{% url 'profile' %}" class="btn btn-custom btn-lg rounded-pill px-5 fw-bold shadow-sm">
-                Go to Dashboard <i class="fa-solid fa-gauge-high ms-2"></i>
-            </a>
-            {% endif %}
-        </div>
-
-        <div class="d-inline-flex align-items-center bg-white shadow px-4 py-2 rounded-pill">
-            <div class="text-start ms-2">
-                <div class="fw-bold d-flex align-items-center text-dark" style="font-size: 0.9rem;">
-                    <i class="fa-solid fa-user-check text-success me-2"></i> Verified Conduction Network
+<!-- HERO SECTION WITH AI IMAGE -->
+<div class="hero-section py-5">
+    <div class="container py-4 py-md-5">
+        <div class="row align-items-center g-5">
+            <!-- Left content -->
+            <div class="col-lg-6 text-start">
+                <span class="badge bg-white text-dark shadow-sm rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase ls-1">
+                    <i class="fa-solid fa-shield-halved text-primary me-2"></i> Trusted AI Proctoring
+                </span>
+                
+                <h1 class="display-4 fw-bolder mb-3 text-dark" style="line-height: 1.15; font-size: 3.2rem;">
+                    Secure Your Certification with <br> 
+                    <span style="color: var(--primary-purple);">Professional</span> Conductors
+                </h1>
+                
+                <p class="lead text-muted mb-4 opacity-75">
+                    The industry-leading AI-monitored exam portal. Get certified through our network of verified conductors and secure behavior-tracking technology.
+                </p>
+                
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <a href="{% url 'login' %}" class="btn btn-custom btn-lg rounded-pill px-4 fw-bold shadow-sm">
+                        Access Your Exams <i class="fa-solid fa-right-to-bracket ms-2"></i>
+                    </a>
+                    <a href="{% url 'examiner_signup' %}" class="btn btn-outline-custom btn-lg rounded-pill px-4 fw-bold">
+                        Join as Conductor
+                    </a>
                 </div>
-                <small class="text-muted" style="font-size: 0.7rem;">Trusted by Global Certification Bodies</small>
+
+                <div class="d-inline-flex align-items-center bg-white shadow-sm px-3 py-2 rounded-pill border">
+                    <i class="fa-solid fa-user-check text-success me-2 fs-5"></i>
+                    <div class="text-start">
+                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">Verified Conduction Network</div>
+                        <small class="text-muted" style="font-size: 0.7rem;">Trusted by Global Certification Bodies</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right content with generated hero image -->
+            <div class="col-lg-6">
+                <div class="hero-image-wrapper">
+                    {% load static %}
+                    <img src="{% static 'images/hero_proctoring.png' %}" alt="AI Proctoring Dashboard" class="img-fluid w-100 h-100" style="object-fit: cover; max-height: 480px;">
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- SECTION: PORTAL SWITCHER -->
-<div class="container py-5 mt-n5 position-relative" style="z-index: 10;">
-    <div class="row g-4 justify-content-center">
-        <!-- Conductor Card -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-lg course-card h-100 p-4 text-center">
-                <div class="bg-primary bg-opacity-10 text-primary rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px;">
-                    <i class="fa-solid fa-crown fs-4"></i>
-                </div>
-                <h5 class="fw-bold mb-2">Conductor</h5>
-                <p class="text-muted small mb-4">Master management hub for organization admins and board members.</p>
-                <div class="mt-auto">
-                    <a href="{% url 'examiner_login' %}" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Master Portal</a>
+<!-- SECTION: PORTAL SWITCHER (RELOCATED) -->
+<div class="portals-section py-5">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold display-6 text-dark">Access Portals</h2>
+            <p class="text-muted">Select the workspace that matches your credentials to manage or enter assessments.</p>
+        </div>
+        
+        <div class="row g-4 justify-content-center">
+            <!-- Conductor Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm portal-card h-100 p-4 text-center">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px;">
+                        <i class="fa-solid fa-crown fs-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Conductor</h5>
+                    <p class="text-muted small mb-4">Master management hub for organization admins and board members.</p>
+                    <div class="mt-auto">
+                        <a href="{% url 'examiner_login' %}" class="btn btn-outline-primary btn-sm rounded-pill px-4 fw-bold">Master Portal</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <!-- Teacher Card -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-lg course-card h-100 p-4 text-center">
-                <div class="bg-teal bg-opacity-10 text-teal rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px; color: #1abc9c;">
-                    <i class="fa-solid fa-chalkboard-user fs-4"></i>
-                </div>
-                <h5 class="fw-bold mb-2">Teacher</h5>
-                <p class="text-muted small mb-4">Instructor dashboard for managing classes, exams, and grading.</p>
-                <div class="mt-auto">
-                    <a href="{% url 'teacher_login' %}" class="btn btn-outline-teal btn-sm rounded-pill px-4 fw-bold" style="border-color: #1abc9c; color: #1abc9c;">Teacher Desk</a>
+            <!-- Teacher Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm portal-card h-100 p-4 text-center">
+                    <div class="bg-teal bg-opacity-10 text-teal rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px; color: #1abc9c;">
+                        <i class="fa-solid fa-chalkboard-user fs-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Teacher</h5>
+                    <p class="text-muted small mb-4">Instructor dashboard for managing classes, exams, and grading.</p>
+                    <div class="mt-auto">
+                        <a href="{% url 'teacher_login' %}" class="btn btn-outline-teal btn-sm rounded-pill px-4 fw-bold" style="border-color: #1abc9c; color: #1abc9c;">Teacher Desk</a>
+                    </div>
                 </div>
             </div>
-        </div>
-        <!-- Student Card -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card border-0 shadow-lg course-card h-100 p-4 text-center">
-                <div class="bg-warning bg-opacity-10 text-warning rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px;">
-                    <i class="fa-solid fa-user-graduate fs-4"></i>
-                </div>
-                <h5 class="fw-bold mb-2">Student</h5>
-                <p class="text-muted small mb-4">Candidate portal for taking proctored exams and certifications.</p>
-                <div class="mt-auto">
-                    <a href="{% url 'login' %}" class="btn btn-outline-warning btn-sm rounded-pill px-4 fw-bold">Student Hall</a>
+            <!-- Student Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm portal-card h-100 p-4 text-center">
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-4 p-3 d-inline-block mb-3 mx-auto" style="width: 60px;">
+                        <i class="fa-solid fa-user-graduate fs-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Student</h5>
+                    <p class="text-muted small mb-4">Candidate portal for taking proctored exams and certifications.</p>
+                    <div class="mt-auto">
+                        <a href="{% url 'login' %}" class="btn btn-outline-warning btn-sm rounded-pill px-4 fw-bold">Student Hall</a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- SECTION: SUBJECTS/COURSES LIST (NEW ADDITION) -->
+<div class="container py-5">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4">
+        <div>
+            <h2 class="fw-bold display-6 text-dark">Available Subjects</h2>
+            <p class="text-muted mb-0">Browse and request enrollment in proctored exam subjects.</p>
+        </div>
+        <div class="mt-3 mt-md-0">
+            <a href="{% url 'course_list' %}" class="btn btn-outline-custom rounded-pill px-4 fw-bold">View Subject Directory</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {% for course in courses %}
+        <div class="col-12">
+            <div class="subject-list-item p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+                <div class="d-flex align-items-center mb-3 mb-md-0">
+                    <div class="me-3">
+                        {% if course.thumbnail %}
+                            <img src="{{ course.thumbnail.url }}" class="rounded-3" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #eef2f6;">
+                        {% else %}
+                            <div class="subject-icon-box">
+                                {{ course.title|slice:":1"|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                            <h5 class="fw-bold mb-0 text-dark">{{ course.title }}</h5>
+                            <span class="badge rounded-pill lesson-badge px-2.5 py-1">
+                                <i class="fa-solid fa-file-invoice me-1"></i> {{ course.video_count }} Units
+                            </span>
+                        </div>
+                        <p class="text-muted small mb-0 text-truncate" style="max-width: 600px;">
+                            {{ course.description }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-4 border-top pt-3 pt-md-0 border-md-0 mt-3 mt-md-0">
+                    <div class="text-start text-md-end">
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Subject Access</small>
+                        <span class="fw-bold text-dark fs-5">
+                            {% if course.price > 0 %}
+                                ₹{{ course.price }}
+                            {% else %}
+                                Free
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div>
+                        {% if user.is_authenticated and user.is_student %}
+                            {% if course.is_enrolled %}
+                                <a href="{% url 'course_viewer' course.id 1 %}" class="btn btn-dark rounded-pill px-4 fw-bold btn-sm">
+                                    Start Learning <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
+                            {% elif course.access_request and course.access_request.status == 'pending' %}
+                                <button class="btn btn-outline-warning rounded-pill px-4 fw-bold btn-sm" disabled>
+                                    <i class="fa-solid fa-hourglass-half me-1"></i> Pending
+                                </button>
+                            {% elif course.access_request and course.access_request.status == 'rejected' %}
+                                <a href="{% url 'course_checkout' course.id %}" class="btn btn-outline-danger rounded-pill px-4 fw-bold btn-sm">
+                                    Re-Apply <i class="fa-solid fa-credit-card ms-1"></i>
+                                </a>
+                            {% else %}
+                                {% if course.price > 0 %}
+                                    <a href="{% url 'course_checkout' course.id %}" class="btn btn-custom rounded-pill px-4 fw-bold btn-sm">
+                                        Buy Subject <i class="fa-solid fa-credit-card ms-1"></i>
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'request_course_access' course.id %}" class="btn btn-custom rounded-pill px-4 fw-bold btn-sm">
+                                        Enroll Free <i class="fa-solid fa-paper-plane ms-1"></i>
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        {% elif user.is_authenticated %}
+                            <button class="btn btn-outline-secondary rounded-pill px-4 fw-bold btn-sm" disabled>
+                                Student Only
+                            </button>
+                        {% else %}
+                            <a href="{% url 'login' %}?next={% url 'course_list' %}" class="btn btn-outline-dark rounded-pill px-4 fw-bold btn-sm">
+                                Login to Request <i class="fa-solid fa-arrow-right ms-1 opacity-50"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-4">
+            <div class="bg-light p-4 rounded-4">
+                <i class="fa-solid fa-magnifying-glass fs-3 text-muted mb-2 opacity-50"></i>
+                <h6 class="text-muted mb-0">No subjects listed yet.</h6>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
 <div class="container py-5" id="conductors">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-end mb-5">
         <div>
             <h2 class="fw-bold display-6 text-dark">Meet Our Exam Conductors</h2>
-            <p class="text-muted">Verified professionals and examiners managing secure certification sessions.</p>
+            <p class="text-muted">Verified professionals and conductors managing secure certification sessions.</p>
         </div>
         <div class="d-flex gap-2 mt-3 mt-md-0">
             <a href="{% url 'mentors' %}" class="btn btn-light rounded-pill px-4 fw-bold">View All Conductors</a>
@@ -328,21 +513,21 @@
 <div class="container py-5 my-5">
     <div class="row align-items-center g-5">
         <div class="col-lg-6">
-            <h2 class="fw-bold display-5 mb-4">State-of-the-art <br><span class="text-primary">AI Proctoring</span></h2>
-            <p class="lead text-muted mb-4">Our portal uses advanced machine learning to ensure exam integrity and fairness for all candidates.</p>
+            <h2 class="fw-bold display-5 mb-4">State-of-the-art <br><span class="text-primary">Exam Proctoring</span></h2>
+            <p class="lead text-muted mb-4">Our portal tracks browser states and camera presence to help ensure integrity during assessments.</p>
             
             <ul class="list-unstyled">
                 <li class="mb-3 d-flex align-items-center">
                     <i class="fa-solid fa-circle-check text-success me-3 fs-5"></i>
-                    <span><strong>Face & Gaze Tracking:</strong> Real-time behavioral monitoring.</span>
+                    <span><strong>Webcam Verification:</strong> Face presence checks during assessment sessions.</span>
                 </li>
                 <li class="mb-3 d-flex align-items-center">
                     <i class="fa-solid fa-circle-check text-success me-3 fs-5"></i>
-                    <span><strong>Environment Scanning:</strong> Detection of multiple persons or devices.</span>
+                    <span><strong>Tab Focus Tracking:</strong> Monitoring when candidates switch browser tabs or lose focus.</span>
                 </li>
                 <li class="mb-3 d-flex align-items-center">
                     <i class="fa-solid fa-circle-check text-success me-3 fs-5"></i>
-                    <span><strong>Automated Flagging:</strong> instant logs for conductor review.</span>
+                    <span><strong>Evidence Snapshots:</strong> Capturing event screenshots for tutor verification.</span>
                 </li>
             </ul>
         </div>
