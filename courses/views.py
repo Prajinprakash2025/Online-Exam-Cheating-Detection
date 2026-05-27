@@ -465,17 +465,75 @@ def reset_new_password_view(request):
 # ------------------------------------------------------------------
 @login_required
 def profile_view(request):
-    from courses.models import ExamAssignment
     enrolled_courses = Enrollment.objects.filter(student=request.user)
     quiz_progress = Progress.objects.filter(student=request.user)
-    exam_assignments = ExamAssignment.objects.filter(student=request.user).select_related('exam', 'exam__course')
     
     context = {
         'enrolled_courses': enrolled_courses,
         'quiz_progress': quiz_progress,
-        'exam_assignments': exam_assignments,
     }
     return render(request, 'profile.html', context)
+
+
+def _student_exam_page(request, status_filter, page_title, page_subtitle, active_tab):
+    from courses.models import ExamAssignment
+
+    exam_assignments = ExamAssignment.objects.filter(
+        student=request.user
+    ).select_related('exam', 'exam__course').prefetch_related('exam__questions').order_by('-assigned_at')
+
+    if status_filter == 'new':
+        visible_assignments = exam_assignments.filter(status='assigned')
+    elif status_filter == 'completed':
+        visible_assignments = exam_assignments.exclude(status='assigned')
+    elif status_filter == 'marks':
+        visible_assignments = exam_assignments.filter(status='completed')
+    else:
+        visible_assignments = exam_assignments
+
+    return render(request, 'student_exam_papers.html', {
+        'assignments': visible_assignments,
+        'page_title': page_title,
+        'page_subtitle': page_subtitle,
+        'active_tab': active_tab,
+        'new_exam_count': exam_assignments.filter(status='assigned').count(),
+        'completed_exam_count': exam_assignments.exclude(status='assigned').count(),
+        'published_mark_count': exam_assignments.filter(status='completed').count(),
+    })
+
+
+@login_required
+def student_new_exams(request):
+    return _student_exam_page(
+        request,
+        'new',
+        'New Exam Papers',
+        'Start assigned exam papers that are still pending.',
+        'new',
+    )
+
+
+@login_required
+def student_completed_exams(request):
+    return _student_exam_page(
+        request,
+        'completed',
+        'Completed Exam Papers',
+        'See submitted and published exam papers separately from courses.',
+        'completed',
+    )
+
+
+@login_required
+def student_mark_list(request):
+    return _student_exam_page(
+        request,
+        'marks',
+        'Mark List',
+        'Published marks from reviewed assessment papers.',
+        'marks',
+    )
+
 
 @login_required
 def edit_profile_view(request):
@@ -1098,7 +1156,6 @@ def process_quiz_frame(request, session_id):
                     return JsonResponse({'status': 'error', 'message': 'Invalid frame'}, status=400)
 
                 frame = cv2.resize(frame, (640, 480))
-                _cache_latest_frame_snapshot(session.id, frame)
                 raw_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 gray = cv2.equalizeHist(raw_gray)
 
@@ -1123,6 +1180,8 @@ def process_quiz_frame(request, session_id):
                     None,
                 )
                 frame_usable = _frame_is_usable(raw_gray)
+                if frame_usable:
+                    _cache_latest_frame_snapshot(session.id, frame)
 
                 # 1) YOLO phone detection is more reliable than shape guessing.
                 if yolo_phone:
@@ -1222,7 +1281,8 @@ def process_quiz_frame(request, session_id):
                         'phone_detected': 'Phone detected in frame',
                     }
                     if _should_log_confirmed_violation(session.id, violation_type, FRAME_CONFIRMATION_RULES):
-                        logged = _log_proctoring_violation(session, violation_type, confidence, frame=frame)
+                        evidence_frame = frame if frame_usable else None
+                        logged = _log_proctoring_violation(session, violation_type, confidence, frame=evidence_frame)
                         return JsonResponse({
                             'status': 'success',
                             'violation': logged,

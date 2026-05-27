@@ -371,6 +371,147 @@ def delete_student_assignment(request, student_id):
 
 @login_required
 @user_passes_test(is_teacher)
+def student_exam_status(request, student_id):
+    assignment = get_object_or_404(
+        TeacherStudentAssignment.objects.select_related('student', 'course'),
+        teacher=request.user,
+        student_id=student_id,
+    )
+    student = assignment.student
+
+    exam_assignments = ExamAssignment.objects.filter(
+        student=student,
+        exam__created_by=request.user,
+    ).select_related('exam', 'exam__course').order_by('-assigned_at')
+
+    sessions_by_exam_id = {}
+    sessions = QuizSession.objects.filter(
+        student=student,
+        exam_id__in=exam_assignments.values_list('exam_id', flat=True),
+    ).select_related('exam').order_by('exam_id', '-start_time')
+    for session in sessions:
+        sessions_by_exam_id.setdefault(session.exam_id, session)
+
+    totals = {
+        'assigned': 0,
+        'not_started': 0,
+        'submitted': 0,
+        'completed': 0,
+        'flagged': 0,
+    }
+
+    for exam_assignment in exam_assignments:
+        session = sessions_by_exam_id.get(exam_assignment.exam_id)
+        exam_assignment.latest_session = session
+        totals['assigned'] += 1
+        exam_assignment.score_display = None
+        if exam_assignment.final_score is not None:
+            exam_assignment.score_display = exam_assignment.final_score
+        elif session and session.is_reviewed and session.score is not None:
+            exam_assignment.score_display = session.score
+
+        if exam_assignment.status == 'completed':
+            totals['completed'] += 1
+            exam_assignment.status_label = 'Published'
+            exam_assignment.status_class = 'success'
+            exam_assignment.condition_label = 'Final mark published'
+            exam_assignment.condition_class = 'success'
+        elif exam_assignment.status == 'submitted':
+            totals['submitted'] += 1
+            exam_assignment.status_label = 'Waiting Review'
+            exam_assignment.status_class = 'warning'
+            exam_assignment.condition_label = 'Student submitted, teacher grading pending'
+            exam_assignment.condition_class = 'warning'
+        else:
+            totals['not_started'] += 1
+            exam_assignment.status_label = 'Assigned'
+            exam_assignment.status_class = 'primary'
+            exam_assignment.condition_label = 'Not submitted yet'
+            exam_assignment.condition_class = 'secondary'
+
+        if session and session.status == 'ongoing':
+            exam_assignment.condition_label = 'Live exam in progress'
+            exam_assignment.condition_class = 'info'
+        elif session and session.status == 'flagged':
+            totals['flagged'] += 1
+            exam_assignment.condition_label = 'Integrity flagged'
+            exam_assignment.condition_class = 'danger'
+        elif session and session.status == 'disqualified':
+            exam_assignment.condition_label = 'Disqualified'
+            exam_assignment.condition_class = 'dark'
+
+    return render(request, 'teachers/student_exam_status.html', {
+        'assignment': assignment,
+        'student': student,
+        'exam_assignments': exam_assignments,
+        'available_exams': Exam.objects.filter(created_by=request.user).select_related('course').order_by('-created_at'),
+        'totals': totals,
+    })
+
+
+@login_required
+@user_passes_test(is_teacher)
+def assign_or_reexam_student(request, student_id):
+    if request.method != 'POST':
+        return redirect('student_exam_status', student_id=student_id)
+
+    teacher_assignment = get_object_or_404(
+        TeacherStudentAssignment.objects.select_related('student'),
+        teacher=request.user,
+        student_id=student_id,
+    )
+    exam = get_object_or_404(Exam, id=request.POST.get('exam_id'), created_by=request.user)
+    exam_assignment, created = ExamAssignment.objects.get_or_create(
+        exam=exam,
+        student=teacher_assignment.student,
+        defaults={'status': 'assigned'},
+    )
+
+    QuizSession.objects.filter(student=teacher_assignment.student, exam=exam).delete()
+    if not created:
+        exam_assignment.status = 'assigned'
+        exam_assignment.final_score = None
+        exam_assignment.due_date = None
+        exam_assignment.save(update_fields=['status', 'final_score', 'due_date'])
+
+    student_name = teacher_assignment.student.get_full_name() or teacher_assignment.student.username
+    action = 'assigned' if created else 'reset for re-exam'
+    messages.success(request, f"'{exam.title}' {action} for {student_name}.")
+    return redirect('student_exam_status', student_id=student_id)
+
+
+@login_required
+@user_passes_test(is_teacher)
+def cancel_student_exam_assignment(request, student_id, assignment_id):
+    if request.method != 'POST':
+        return redirect('student_exam_status', student_id=student_id)
+
+    get_object_or_404(
+        TeacherStudentAssignment,
+        teacher=request.user,
+        student_id=student_id,
+    )
+    exam_assignment = get_object_or_404(
+        ExamAssignment.objects.select_related('exam', 'student'),
+        id=assignment_id,
+        student_id=student_id,
+        exam__created_by=request.user,
+    )
+    exam_title = exam_assignment.exam.title
+    student_name = exam_assignment.student.get_full_name() or exam_assignment.student.username
+
+    QuizSession.objects.filter(
+        student_id=student_id,
+        exam=exam_assignment.exam,
+    ).delete()
+    exam_assignment.delete()
+
+    messages.success(request, f"Removed '{exam_title}' from {student_name}.")
+    return redirect('student_exam_status', student_id=student_id)
+
+
+@login_required
+@user_passes_test(is_teacher)
 def teacher_manage_exam(request, video_id):
     video = get_object_or_404(Video, id=video_id)
     # ensure teacher is assigned to course

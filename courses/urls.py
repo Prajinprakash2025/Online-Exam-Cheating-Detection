@@ -12,6 +12,9 @@ urlpatterns = [
     path('faq/', views.faq, name='faq'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.edit_profile_view, name='edit_profile'),
+    path('exams/new/', views.student_new_exams, name='student_new_exams'),
+    path('exams/completed/', views.student_completed_exams, name='student_completed_exams'),
+    path('exams/marks/', views.student_mark_list, name='student_mark_list'),
     path('dashboard/', views.instructor_dashboard, name='instructor_dashboard'),
 
     # --- Authentication ---

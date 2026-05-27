@@ -126,7 +126,7 @@
                     </h6>
                     
                     <div class="position-relative overflow-hidden rounded-4 shadow-sm bg-dark" style="border: 3px solid #198754; min-height: 200px;">
-                        <video id="webcam" autoplay playsinline width="100%" class="d-block"></video>
+                        <video id="webcam" autoplay muted playsinline width="100%" class="d-block"></video>
                         <span class="position-absolute top-0 end-0 m-2 badge bg-danger shadow-sm recording-dot px-2 py-1">
                             <i class="fa-solid fa-circle text-white" style="font-size: 0.5rem; vertical-align: middle; margin-right: 3px;"></i> REC
                         </span>
@@ -134,7 +134,7 @@
                     
                     <canvas id="captureCanvas" style="display: none;"></canvas>
                     
-                    <small class="text-muted d-block mt-3 fw-semibold">
+                    <small id="cameraLiveStatus" class="text-muted d-block mt-3 fw-semibold">
                         <i class="fa-solid fa-robot text-primary me-1"></i> AI Behaviour Analysis Active
                     </small>
                 </div>
@@ -153,6 +153,7 @@
     const quizForm = document.getElementById('quizForm');
     const startAssessmentButton = document.getElementById('startAssessmentButton');
     const cameraStatus = document.getElementById('cameraStatus');
+    const cameraLiveStatus = document.getElementById('cameraLiveStatus');
 
     function updateTimer() {
         if (!assessmentStarted) {
@@ -177,35 +178,118 @@
     // 2. WEBCAM ACCESS LOGIC
     // ==========================================
     const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('captureCanvas');
+    const context = canvasElement.getContext('2d');
+    const captureInterval = 2500; // Frequent checks make short cheating attempts harder to miss.
     let proctoringTimer = null;
     let lastFrameSentAt = 0;
+    let cameraReady = false;
+    let cameraCheckTimer = null;
     const lastEventSentAt = {};
 
-    navigator.mediaDevices.getUserMedia({ video: true })
+    function setCameraStatus(message, statusClass) {
+        if (cameraStatus) {
+            cameraStatus.innerText = message;
+            cameraStatus.classList.remove('text-muted', 'text-success', 'text-danger', 'text-warning');
+            cameraStatus.classList.add(statusClass);
+        }
+        if (cameraLiveStatus) {
+            cameraLiveStatus.innerText = message;
+            cameraLiveStatus.classList.remove('text-muted', 'text-success', 'text-danger', 'text-warning');
+            cameraLiveStatus.classList.add(statusClass);
+        }
+    }
+
+    function startProctoringLoop() {
+        if (!assessmentStarted || proctoringTimer || !cameraReady) {
+            return;
+        }
+        captureAndSendFrame();
+        proctoringTimer = setInterval(captureAndSendFrame, captureInterval);
+        setCameraStatus("Camera active. AI behaviour analysis is running.", "text-success");
+    }
+
+    function hasVisibleCameraFrame() {
+        if (!videoElement.videoWidth || videoElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            return false;
+        }
+
+        const sampleCanvas = document.createElement('canvas');
+        sampleCanvas.width = 80;
+        sampleCanvas.height = 60;
+        const sampleContext = sampleCanvas.getContext('2d');
+        sampleContext.drawImage(videoElement, 0, 0, sampleCanvas.width, sampleCanvas.height);
+        const pixels = sampleContext.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height).data;
+
+        let total = 0;
+        let totalSq = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+            const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+            total += brightness;
+            totalSq += brightness * brightness;
+        }
+        const count = pixels.length / 4;
+        const mean = total / count;
+        const variance = Math.max(0, totalSq / count - mean * mean);
+        const contrast = Math.sqrt(variance);
+        return mean > 12 && mean < 245 && contrast > 4;
+    }
+
+    function markCameraReadyWhenVisible() {
+        if (hasVisibleCameraFrame()) {
+            cameraReady = true;
+            if (startAssessmentButton) {
+                startAssessmentButton.disabled = false;
+            }
+            setCameraStatus(
+                assessmentStarted
+                    ? "Camera active. AI behaviour analysis is running."
+                    : "Camera preview is visible. Click Start Assessment to begin.",
+                "text-success"
+            );
+            if (cameraCheckTimer) {
+                clearInterval(cameraCheckTimer);
+                cameraCheckTimer = null;
+            }
+            startProctoringLoop();
+            return true;
+        }
+
+        cameraReady = false;
+        if (startAssessmentButton) {
+            startAssessmentButton.disabled = true;
+        }
+        setCameraStatus("Camera opened, but no clear video frame yet. Check light/camera cover, then wait or refresh.", "text-warning");
+        return false;
+    }
+
+    function startCameraReadinessChecks() {
+        setCameraStatus("Camera is opening. Waiting for visible video frame...", "text-warning");
+        if (cameraCheckTimer) {
+            clearInterval(cameraCheckTimer);
+        }
+        cameraCheckTimer = setInterval(markCameraReadyWhenVisible, 600);
+        setTimeout(markCameraReadyWhenVisible, 250);
+    }
+
+    navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+    })
         .then(function(stream) {
             videoElement.srcObject = stream;
             videoElement.onloadedmetadata = function() {
-                if (startAssessmentButton) {
-                    startAssessmentButton.disabled = false;
-                }
-                if (cameraStatus) {
-                    cameraStatus.innerText = "Camera is ready. Click Start Assessment to show questions and begin the timer.";
-                    cameraStatus.classList.remove('text-muted');
-                    cameraStatus.classList.add('text-success');
-                }
-                if (assessmentStarted) {
-                    captureAndSendFrame();
-                }
+                videoElement.play().catch(error => console.warn("Camera preview play warning:", error));
+                startCameraReadinessChecks();
             };
+            videoElement.addEventListener('loadeddata', startCameraReadinessChecks);
+            videoElement.addEventListener('canplay', markCameraReadyWhenVisible);
+            videoElement.play().catch(error => console.warn("Camera preview play warning:", error));
         })
         .catch(function(err) {
             alert("Webcam access is required for this Proctored Exam! Please allow camera permissions.");
             console.error("Camera error:", err);
-            if (cameraStatus) {
-                cameraStatus.innerText = "Camera permission is blocked. Please allow camera access to start.";
-                cameraStatus.classList.remove('text-muted');
-                cameraStatus.classList.add('text-danger');
-            }
+            setCameraStatus("Camera permission is blocked. Please allow camera access to start.", "text-danger");
             if (assessmentStarted) {
                 reportProctoringEvent('camera_stalled');
             }
@@ -214,10 +298,6 @@
     // ==========================================
     // 3. AI FRAME CAPTURE & AJAX LOGIC
     // ==========================================
-    const canvasElement = document.getElementById('captureCanvas');
-    const context = canvasElement.getContext('2d');
-    const captureInterval = 2500; // Frequent checks make short cheating attempts harder to miss.
-
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -282,9 +362,7 @@
     }
 
     videoElement.addEventListener('play', () => {
-        if (assessmentStarted && !proctoringTimer) {
-            proctoringTimer = setInterval(captureAndSendFrame, captureInterval);
-        }
+        markCameraReadyWhenVisible();
     });
 
     document.addEventListener('visibilitychange', function() {

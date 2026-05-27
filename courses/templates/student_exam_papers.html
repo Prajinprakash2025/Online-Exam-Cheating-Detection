@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-purple: #8e44ad;
+        --primary-teal: #1abc9c;
+        --text-dark: #2c3e50;
+        --bg-light: #f8f9fa;
+    }
+
+    body {
+        background: var(--bg-light);
+    }
+
+    .exam-shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 2.5rem 1rem;
+    }
+
+    .exam-tab {
+        border: 1px solid #e9ecef;
+        color: #64748b;
+        background: white;
+        border-radius: 999px;
+        padding: 0.7rem 1.1rem;
+        text-decoration: none;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .exam-tab.active,
+    .exam-tab:hover {
+        background: var(--primary-purple);
+        border-color: var(--primary-purple);
+        color: white;
+    }
+
+    .exam-card {
+        border: 1px solid #eef2f7;
+        border-radius: 18px;
+        background: white;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .exam-card-top {
+        background: linear-gradient(135deg, #f0f9ff, #f7f2fb);
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .status-panel {
+        border-radius: 16px;
+        padding: 1rem;
+        text-align: center;
+        font-weight: 800;
+    }
+
+    .status-assigned {
+        background: #eef6ff;
+        color: #0d6efd;
+    }
+
+    .status-submitted {
+        background: #fff8e6;
+        color: #b7791f;
+    }
+
+    .status-published {
+        background: #eafaf2;
+        color: #0f8a5f;
+    }
+
+    .mark-table {
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+    }
+
+    .mark-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem;
+    }
+
+    .mark-table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+</style>
+
+<div class="exam-shell">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <a href="{% url 'profile' %}" class="text-decoration-none small fw-bold text-muted">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to profile
+            </a>
+            <h2 class="fw-bold text-dark mt-3 mb-1">{{ page_title }}</h2>
+            <p class="text-muted mb-0">{{ page_subtitle }}</p>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <a href="{% url 'student_new_exams' %}" class="exam-tab {% if active_tab == 'new' %}active{% endif %}">
+            <i class="fa-solid fa-file-circle-plus"></i> New Exams
+            <span class="badge bg-light text-dark">{{ new_exam_count }}</span>
+        </a>
+        <a href="{% url 'student_completed_exams' %}" class="exam-tab {% if active_tab == 'completed' %}active{% endif %}">
+            <i class="fa-solid fa-file-circle-check"></i> Completed Exams
+            <span class="badge bg-light text-dark">{{ completed_exam_count }}</span>
+        </a>
+        <a href="{% url 'student_mark_list' %}" class="exam-tab {% if active_tab == 'marks' %}active{% endif %}">
+            <i class="fa-solid fa-square-poll-vertical"></i> Mark List
+            <span class="badge bg-light text-dark">{{ published_mark_count }}</span>
+        </a>
+    </div>
+
+    {% if active_tab == 'marks' %}
+        <div class="mark-table table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th>Exam Paper</th>
+                        <th>Subject</th>
+                        <th>Score</th>
+                        <th>Result Status</th>
+                        <th>Published Condition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-dark">{{ assignment.exam.title }}</div>
+                            <small class="text-muted">Assigned {{ assignment.assigned_at|date:"M d, Y" }}</small>
+                        </td>
+                        <td>{{ assignment.exam.course.title }}</td>
+                        <td class="fw-bold text-success fs-5">{{ assignment.final_score|floatformat:1 }}%</td>
+                        <td><span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Published</span></td>
+                        <td class="text-muted small">Teacher reviewed and published the mark.</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-square-poll-vertical display-6 d-block mb-3 opacity-25"></i>
+                            No published marks yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="row g-3">
+            {% for assignment in assignments %}
+            <div class="col-md-6">
+                <div class="exam-card">
+                    <div class="exam-card-top p-4">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <h6 class="text-info fw-bold small text-uppercase mb-2">
+                                    <i class="fa-solid fa-file-contract me-1"></i> Examination Paper
+                                </h6>
+                                <h5 class="fw-bold text-dark mb-0">{{ assignment.exam.title }}</h5>
+                            </div>
+                            {% if assignment.status == 'completed' %}
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">Published</span>
+                            {% elif assignment.status == 'submitted' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2">Under Review</span>
+                            {% else %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2">New</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between small text-muted mb-2">
+                                <span><i class="fa-solid fa-book-bookmark me-1"></i> Subject:</span>
+                                <span class="fw-bold text-dark">{{ assignment.exam.course.title }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted mb-2">
+                                <span><i class="fa-regular fa-clock me-1"></i> Duration:</span>
+                                <span class="fw-bold text-dark">{{ assignment.exam.duration_minutes }} Mins</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span><i class="fa-solid fa-list-check me-1"></i> Questions:</span>
+                                <span class="fw-bold text-dark">{{ assignment.exam.questions.count }} Items</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto">
+                            {% if assignment.status == 'completed' %}
+                                <div class="status-panel status-published">
+                                    <div class="small text-uppercase mb-1">Published Result</div>
+                                    <div class="fs-4"><i class="fa-solid fa-check-circle me-1"></i>{{ assignment.final_score|floatformat:1 }}%</div>
+                                </div>
+                            {% elif assignment.status == 'submitted' %}
+                                <div class="status-panel status-submitted">
+                                    <div><i class="fa-solid fa-hourglass-half me-1"></i> Submitted for Evaluation</div>
+                                    <div class="small fw-semibold mt-1">Your mark will appear in Mark List after publishing.</div>
+                                </div>
+                            {% else %}
+                                <a href="{% url 'start_exam' assignment.exam.id %}" class="btn btn-info text-white w-100 py-3 rounded-pill fw-bold shadow-sm">
+                                    START ASSESSMENT <i class="fa-solid fa-chevron-right ms-2"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5 bg-white rounded-4 shadow-sm">
+                    <i class="fa-solid fa-file-circle-question display-6 d-block mb-3 opacity-25"></i>
+                    <h5 class="fw-bold text-dark">Nothing to show here</h5>
+                    <p class="text-muted mb-0">Exam papers will appear on this page when their status matches.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

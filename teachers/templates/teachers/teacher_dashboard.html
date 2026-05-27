@@ -396,7 +396,7 @@
                                     <button onclick="openSingleStudentAssignModal('{{ assignment.student.id }}', '{{ assignment.student.get_full_name|default:assignment.student.username }}')" class="btn btn-sm btn-purple text-white rounded-pill px-3 me-1">
                                         <i class="fa-solid fa-paper-plane"></i>
                                     </button>
-                                    <a href="{% url 'teacher_proctoring_dashboard' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1">
+                                    <a href="{% url 'student_exam_status' assignment.student.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1">
                                         <i class="fa-solid fa-eye"></i>
                                     </a>
                                     <button class="btn btn-sm btn-outline-teal rounded-pill px-3 me-1"

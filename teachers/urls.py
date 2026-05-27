@@ -16,5 +16,8 @@ urlpatterns = [
     path('exam/<int:exam_id>/questions/', views.teacher_exam_questions, name='teacher_exam_questions'),
     path('exam/question/delete/<int:question_id>/', views.delete_exam_question, name='delete_exam_question'),
     path('exam/session/grade/<int:session_id>/', views.grade_exam_session, name='grade_exam_session'),
+    path('student/<int:student_id>/exams/', views.student_exam_status, name='student_exam_status'),
+    path('student/<int:student_id>/exam-assignment/assign/', views.assign_or_reexam_student, name='assign_or_reexam_student'),
+    path('student/<int:student_id>/exam-assignment/<int:assignment_id>/cancel/', views.cancel_student_exam_assignment, name='cancel_student_exam_assignment'),
     path('student/delete/<int:student_id>/', views.delete_student_assignment, name='delete_student_assignment'),
 ]

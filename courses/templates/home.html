@@ -193,7 +193,7 @@
                             <a href="{% url 'teacher_proctoring_dashboard' %}" class="btn btn-outline-success rounded-pill fw-bold">Review Submissions</a>
                         {% else %}
                             <a href="{% url 'profile' %}" class="btn btn-warning btn-lg rounded-pill fw-bold text-white">Open Student Profile</a>
-                            <a href="{% url 'profile' %}" class="btn btn-outline-warning rounded-pill fw-bold">View Assigned Exams</a>
+                            <a href="{% url 'student_new_exams' %}" class="btn btn-outline-warning rounded-pill fw-bold">View Assigned Exams</a>
                         {% endif %}
                     </div>
                 </div>
@@ -238,7 +238,7 @@
         <div class="row g-4">
             <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-camera text-warning fs-3 mb-3"></i><h5 class="fw-bold">Before Exam</h5><p class="text-muted mb-0">Keep your webcam ready, sit alone, and avoid switching tabs during the session.</p></div></div>
             <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-hourglass-half text-warning fs-3 mb-3"></i><h5 class="fw-bold">After Submit</h5><p class="text-muted mb-0">Your score stays hidden until a teacher reviews and publishes the result.</p></div></div>
-            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-square-poll-vertical text-warning fs-3 mb-3"></i><h5 class="fw-bold">Results</h5><p class="text-muted mb-0">Published marks appear in your profile under Mandatory Assessment Papers.</p></div></div>
+            <div class="col-md-4"><div class="instruction-card p-4"><i class="fa-solid fa-square-poll-vertical text-warning fs-3 mb-3"></i><h5 class="fw-bold">Results</h5><p class="text-muted mb-0">Published marks appear in your Mark List after teacher review.</p></div></div>
         </div>
         {% endif %}
     </div>

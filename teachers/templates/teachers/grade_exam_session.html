@@ -27,6 +27,50 @@
         letter-spacing: 0.5px;
         padding: 5px 12px;
     }
+    .evidence-scroll {
+        max-height: 420px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+    .evidence-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .evidence-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px;
+    }
+    .evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .evidence-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+    }
+    .evidence-thumb {
+        height: 82px;
+        width: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .evidence-empty {
+        height: 82px;
+        background: #f8fafc;
+    }
+    .evidence-meta {
+        padding: 8px;
+    }
+    .evidence-title {
+        font-size: 0.72rem;
+        line-height: 1.2;
+    }
+    .evidence-time {
+        font-size: 0.68rem;
+        line-height: 1.2;
+    }
 </style>
 
 <div class="grading-header mb-5">
@@ -196,34 +240,34 @@
                         <h6 class="fw-bold text-muted text-uppercase ls-1 mb-0">Evidence Images</h6>
                         <span class="badge bg-danger rounded-pill">{{ logs.count }}</span>
                     </div>
-                    <div class="row g-3">
+                    <div class="evidence-scroll">
+                        <div class="evidence-grid">
                         {% for log in logs %}
-                        <div class="col-12">
-                            <div class="border rounded-4 overflow-hidden bg-light">
+                        <div class="evidence-item">
                                 {% if log.evidence_image %}
                                     <a href="{{ log.evidence_image.url }}" target="_blank" class="d-block">
-                                        <img src="{{ log.evidence_image.url }}" alt="Evidence snapshot" class="w-100" style="height: 190px; object-fit: cover;">
+                                        <img src="{{ log.evidence_image.url }}" alt="Evidence snapshot" class="evidence-thumb">
                                     </a>
                                 {% else %}
-                                    <div class="d-flex flex-column align-items-center justify-content-center text-muted" style="height: 190px;">
-                                        <i class="fa-solid fa-image-slash fs-1 opacity-25 mb-2"></i>
-                                        <span class="small fw-bold">No Image Available</span>
+                                    <div class="evidence-empty d-flex flex-column align-items-center justify-content-center text-muted">
+                                        <i class="fa-solid fa-image-slash fs-4 opacity-25 mb-1"></i>
+                                        <span class="small fw-bold">No Image</span>
                                     </div>
                                 {% endif %}
-                                <div class="p-3 bg-white">
-                                    <div class="fw-bold text-danger small">{{ log.get_violation_type_display }}</div>
-                                    <div class="text-muted small">
+                                <div class="evidence-meta bg-white">
+                                    <div class="fw-bold text-danger evidence-title text-truncate">{{ log.get_violation_type_display }}</div>
+                                    <div class="text-muted evidence-time">
                                         {{ log.timestamp|time:"H:i:s" }}{% if log.confidence_score %} &bull; Confidence {{ log.confidence_score|floatformat:2 }}{% endif %}
                                     </div>
                                 </div>
-                            </div>
                         </div>
                         {% empty %}
-                        <div class="col-12 text-center py-4 bg-light rounded-4">
+                        <div class="text-center py-4 bg-light rounded-4" style="grid-column: 1 / -1;">
                             <i class="fa-solid fa-shield-check text-success fs-1 mb-2"></i>
                             <p class="small fw-bold text-success mb-0">No evidence images recorded.</p>
                         </div>
                         {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>

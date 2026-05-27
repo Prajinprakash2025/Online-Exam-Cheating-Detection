@@ -185,6 +185,9 @@
           <ul class="navbar-nav mx-auto">
             <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'course_list' %}">Explore Subjects</a></li>      
+            {% if user.is_authenticated and user.is_student %}
+            <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'student_new_exams' %}"><i class="fa-solid fa-file-contract me-1"></i> My Exams</a></li>
+            {% endif %}
             <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">About</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contact</a></li>
           </ul>
