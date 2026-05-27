@@ -413,7 +413,7 @@
                                 <td>{{ teacher.experience_years }} Years</td>
                                 <td class="text-end">
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" 
-                                            onclick="openEditTeacherModal('{{ teacher.id }}', '{{ teacher.first_name }}', '{{ teacher.last_name }}', '{{ teacher.email }}')">
+                                             onclick="openEditTeacherModal('{{ teacher.id }}', '{{ teacher.first_name|escapejs }}', '{{ teacher.last_name|escapejs }}', '{{ teacher.email|escapejs }}', '{{ teacher.specialty|default:""|escapejs }}', '{{ teacher.experience_years|default:"0" }}')">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <a href="{% url 'delete_conductor' teacher.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Revoke this teacher\'s access?')"><i class="fa-solid fa-trash"></i></a>
@@ -729,6 +729,20 @@
                                 <div class="field-error">{{ teacher_form.email.errors|striptags }}</div>
                             {% endif %}
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Specialty</label>
+                            <input type="text" name="specialty" class="form-control" placeholder="e.g. Mathematics" value="{{ teacher_form.specialty.value|default_if_none:'' }}">
+                            {% if teacher_form.specialty.errors %}
+                                <div class="field-error">{{ teacher_form.specialty.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Experience (Years)</label>
+                            <input type="number" name="experience_years" class="form-control" placeholder="0" min="0" value="{{ teacher_form.experience_years.value|default_if_none:'0' }}">
+                            {% if teacher_form.experience_years.errors %}
+                                <div class="field-error">{{ teacher_form.experience_years.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-eg-submit w-100 mt-5">AUTHORIZE TEACHER ACCOUNT</button>
                 </form>
@@ -880,6 +894,14 @@
                         <label class="form-label small fw-bold">Email Address</label>
                         <input type="email" name="email" id="edit_teacher_email" class="form-control" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Specialty</label>
+                        <input type="text" name="specialty" id="edit_teacher_specialty" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Experience (Years)</label>
+                        <input type="number" name="experience_years" id="edit_teacher_experience" class="form-control" min="0">
+                    </div>
                     <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3">SAVE CHANGES</button>
                 </form>
             </div>
@@ -1019,11 +1041,13 @@
     }
 
     // Modal Helpers
-    function openEditTeacherModal(id, fname, lname, email) {
+    function openEditTeacherModal(id, fname, lname, email, specialty, experience) {
         document.getElementById('edit_teacher_id').value = id;
         document.getElementById('edit_teacher_fname').value = fname;
         document.getElementById('edit_teacher_lname').value = lname;
         document.getElementById('edit_teacher_email').value = email;
+        document.getElementById('edit_teacher_specialty').value = specialty;
+        document.getElementById('edit_teacher_experience').value = experience;
         new bootstrap.Modal(document.getElementById('editTeacherModal')).show();
     }
 

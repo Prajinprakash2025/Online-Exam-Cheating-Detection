@@ -465,12 +465,25 @@ def reset_new_password_view(request):
 # ------------------------------------------------------------------
 @login_required
 def profile_view(request):
+    from teachers.models import TeacherStudentAssignment
     enrolled_courses = Enrollment.objects.filter(student=request.user)
     quiz_progress = Progress.objects.filter(student=request.user)
     
+    # Map each course to its assigned teacher(s) for the current student
+    assignments = TeacherStudentAssignment.objects.filter(student=request.user).select_related('teacher')
+    course_teachers = {}
+    assigned_teachers = set()
+    for assignment in assignments:
+        course_teachers.setdefault(assignment.course_id, []).append(assignment.teacher)
+        assigned_teachers.add(assignment.teacher)
+        
+    for enrollment in enrolled_courses:
+        enrollment.teachers = course_teachers.get(enrollment.course_id, [])
+        
     context = {
         'enrolled_courses': enrolled_courses,
         'quiz_progress': quiz_progress,
+        'assigned_teachers': list(assigned_teachers),
     }
     return render(request, 'profile.html', context)
 
@@ -539,9 +552,29 @@ def student_mark_list(request):
 def edit_profile_view(request):
     user = request.user
     if request.method == 'POST':
-        user.first_name = request.POST.get('first_name')
-        user.last_name = request.POST.get('last_name')
-        user.email = request.POST.get('email')
+        email = request.POST.get('email', '').strip().lower()
+        roll_no = request.POST.get('roll_no', '').strip() or None
+        
+        # Check roll_no uniqueness
+        if roll_no and User.objects.exclude(id=user.id).filter(roll_no=roll_no).exists():
+            messages.error(request, "This Student ID is already in use by another user.")
+            return render(request, 'edit_profile.html')
+            
+        user.first_name = request.POST.get('first_name', '')
+        user.last_name = request.POST.get('last_name', '')
+        user.email = email
+        user.phone_number = request.POST.get('phone_number', '')
+        user.roll_no = roll_no
+        
+        age = request.POST.get('age')
+        if age:
+            try:
+                user.age = int(age)
+            except ValueError:
+                pass
+        else:
+            user.age = None
+            
         user.save()
         messages.success(request, "Profile updated successfully!")
         return redirect('profile')
@@ -831,16 +864,16 @@ YOLO_MODEL = None
 YOLO_MODEL_PATH = str(settings.BASE_DIR / 'yolov8n.pt')
 YOLO_PERSON_CLASS_ID = 0
 YOLO_PHONE_CLASS_ID = 67
-YOLO_PERSON_CONFIDENCE = 0.50
-YOLO_PHONE_CONFIDENCE = 0.35
+YOLO_PERSON_CONFIDENCE = 0.35
+YOLO_PHONE_CONFIDENCE = 0.25
 
 
 FRAME_CONFIRMATION_RULES = {
-    'phone_detected': {'needed': 2, 'timeout': 20},
+    'phone_detected': {'needed': 1, 'timeout': 20},
     'multi_face': {'needed': 2, 'timeout': 20},
-    'no_face': {'needed': 3, 'timeout': 25},
-    'head_pose': {'needed': 3, 'timeout': 25},
-    'gaze_deviation': {'needed': 4, 'timeout': 25},
+    'no_face': {'needed': 2, 'timeout': 20},
+    'head_pose': {'needed': 2, 'timeout': 20},
+    'gaze_deviation': {'needed': 2, 'timeout': 20},
 }
 
 EVENT_CONFIRMATION_RULES = {
@@ -889,58 +922,84 @@ def _get_yolo_model():
     return YOLO_MODEL if YOLO_MODEL is not False else None
 
 
+def _dedupe_boxes_with_conf(boxes, overlap_threshold=0.35):
+    kept = []
+    for box in sorted(boxes, key=lambda item: item[4], reverse=True):
+        if all(_rect_overlap_ratio(box[:4], existing[:4]) < overlap_threshold for existing in kept):
+            kept.append(box)
+    return kept
+
+
 def _detect_yolo_objects(frame):
     model = _get_yolo_model()
     if model is None:
         return [], []
 
+    # 1. Run detection on standard BGR frame (YOLO converts this to RGB internally)
     try:
-        results = model.predict(
+        res_bgr = model.predict(
             frame,
-            imgsz=416,
+            imgsz=640,
             conf=min(YOLO_PHONE_CONFIDENCE, YOLO_PERSON_CONFIDENCE),
             classes=[YOLO_PERSON_CLASS_ID, YOLO_PHONE_CLASS_ID],
             verbose=False,
             device='cpu',
         )
     except Exception as exc:
-        print("YOLO detection error:", exc)
-        return [], []
+        print("YOLO detection error (BGR):", exc)
+        res_bgr = None
+
+    # 2. Run detection on RGB-converted frame (YOLO converts this to BGR internally, providing color-swapped feature enhancement)
+    try:
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        res_rgb = model.predict(
+            rgb_frame,
+            imgsz=640,
+            conf=min(YOLO_PHONE_CONFIDENCE, YOLO_PERSON_CONFIDENCE),
+            classes=[YOLO_PERSON_CLASS_ID, YOLO_PHONE_CLASS_ID],
+            verbose=False,
+            device='cpu',
+        )
+    except Exception as exc:
+        print("YOLO detection error (RGB):", exc)
+        res_rgb = None
 
     person_boxes = []
     phone_boxes = []
-    if not results:
-        return person_boxes, phone_boxes
 
-    boxes = results[0].boxes
-    if boxes is None:
-        return person_boxes, phone_boxes
+    def process_results(results):
+        if not results:
+            return
+        boxes = results[0].boxes
+        if boxes is None:
+            return
+        for box in boxes:
+            class_id = int(box.cls[0])
+            confidence = float(box.conf[0])
+            x1, y1, x2, y2 = [int(value) for value in box.xyxy[0]]
+            detected_box = (x1, y1, max(1, x2 - x1), max(1, y2 - y1), confidence)
 
-    for box in boxes:
-        class_id = int(box.cls[0])
-        confidence = float(box.conf[0])
-        x1, y1, x2, y2 = [int(value) for value in box.xyxy[0]]
-        detected_box = (x1, y1, max(1, x2 - x1), max(1, y2 - y1), confidence)
+            if class_id == YOLO_PERSON_CLASS_ID and confidence >= YOLO_PERSON_CONFIDENCE:
+                person_boxes.append(detected_box)
+            elif class_id == YOLO_PHONE_CLASS_ID and confidence >= YOLO_PHONE_CONFIDENCE:
+                phone_boxes.append(detected_box)
 
-        if class_id == YOLO_PERSON_CLASS_ID and confidence >= YOLO_PERSON_CONFIDENCE:
-            person_boxes.append(detected_box)
-        elif class_id == YOLO_PHONE_CLASS_ID and confidence >= YOLO_PHONE_CONFIDENCE:
-            phone_boxes.append(detected_box)
+    process_results(res_bgr)
+    process_results(res_rgb)
 
-    return person_boxes, phone_boxes
+    return _dedupe_boxes_with_conf(person_boxes), _dedupe_boxes_with_conf(phone_boxes)
 
 
 def _phone_is_near_person_or_face(phone_box, person_boxes, face_boxes):
     px, py, pw, ph, _ = phone_box
-    phone_rect = (px, py, pw, ph)
     for fx, fy, fw, fh in face_boxes:
-        near_face_x = fx - 160 <= px <= fx + fw + 160
-        near_face_y = fy - 60 <= py <= fy + fh + 200
+        near_face_x = fx - 200 <= px <= fx + fw + 200
+        near_face_y = fy - 100 <= py <= fy + fh + 250
         if near_face_x and near_face_y:
             return True
     for bx, by, bw, bh, _ in person_boxes:
-        inside_person_x = bx - 40 <= px <= bx + bw + 40
-        inside_person_y = by - 40 <= py <= by + bh + 40
+        inside_person_x = bx - 80 <= px <= bx + bw + 80
+        inside_person_y = by - 80 <= py <= by + bh + 80
         if inside_person_x and inside_person_y:
             return True
     return False
@@ -1175,7 +1234,7 @@ def process_quiz_frame(request, session_id):
                     (
                         phone
                         for phone in yolo_phones
-                        if phone[4] >= 0.50 or _phone_is_near_person_or_face(phone, yolo_people, faces)
+                        if phone[4] >= 0.32 or _phone_is_near_person_or_face(phone, yolo_people, faces)
                     ),
                     None,
                 )
@@ -1255,10 +1314,10 @@ def process_quiz_frame(request, session_id):
                     face_center_x = x + (w / 2)
                     face_center_y = y + (h / 2)
                     looking_edge = (
-                        face_center_x < frame.shape[1] * 0.22 or
-                        face_center_x > frame.shape[1] * 0.78 or
-                        face_center_y < frame.shape[0] * 0.18 or
-                        face_center_y > frame.shape[0] * 0.78
+                        face_center_x < frame.shape[1] * 0.42 or
+                        face_center_x > frame.shape[1] * 0.58 or
+                        face_center_y < frame.shape[0] * 0.38 or
+                        face_center_y > frame.shape[0] * 0.62
                     )
                     
                     if len(eyes) == 0 and looking_edge:

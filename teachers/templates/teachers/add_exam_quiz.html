@@ -126,6 +126,21 @@
     }
     .transition-all { transition: all 0.3s ease; }
 
+    .question-list-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    .question-list-container::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    .question-list-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+    .question-list-container::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
     @media (max-width: 991.98px) {
         .dashboard-container {
             flex-direction: column;
@@ -257,6 +272,12 @@
                 <div class="bg-light px-4 py-2 rounded-pill border">
                     <i class="fa-solid fa-bullseye me-2 text-muted"></i> <strong>{{ exam.passing_score }}% Pass Mark</strong>
                 </div>
+                <div class="bg-light px-4 py-2 rounded-pill border">
+                    <i class="fa-solid fa-award me-2 text-muted"></i> <strong>{{ exam.total_points }} Total Marks</strong>
+                </div>
+                <div class="bg-light px-4 py-2 rounded-pill border">
+                    <i class="fa-solid fa-list-check me-2 text-muted"></i> <strong>{{ questions|length }} Questions</strong>
+                </div>
             </div>
         </div>
 
@@ -352,67 +373,69 @@
                     <h5 class="fw-bold mb-0">Exam Questions ({{ questions|length }})</h5>
                 </div>
 
-                {% for q in questions %}
-                <div class="question-card p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-light text-dark border px-3 py-1 rounded-pill">Question #{{ forloop.counter }}</span>
-                            {% if q.q_type == 'mcq' %}
-                                <span class="type-pill bg-primary bg-opacity-10 text-primary">SINGLE</span>
-                            {% elif q.q_type == 'multi' %}
-                                <span class="type-pill bg-info bg-opacity-10 text-info">MULTIPLE</span>
+                <div class="question-list-container" style="max-height: 700px; overflow-y: auto; padding-right: 10px;">
+                    {% for q in questions %}
+                    <div class="question-card p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-dark border px-3 py-1 rounded-pill">Question #{{ forloop.counter }}</span>
+                                {% if q.q_type == 'mcq' %}
+                                    <span class="type-pill bg-primary bg-opacity-10 text-primary">SINGLE</span>
+                                {% elif q.q_type == 'multi' %}
+                                    <span class="type-pill bg-info bg-opacity-10 text-info">MULTIPLE</span>
+                                {% else %}
+                                    <span class="type-pill bg-warning bg-opacity-10 text-warning">ESSAY</span>
+                                {% endif %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1 rounded-pill small fw-bold" style="font-size: 0.65rem;">{{ q.points }} PTS</span>
+                            </div>
+                            {% if delete_question_url_name %}
+                            <a href="{% url delete_question_url_name q.id %}" class="btn btn-link text-danger p-0" title="Remove" onclick="return confirm('Remove this question?')"><i class="fa-solid fa-trash-can"></i></a>
                             {% else %}
-                                <span class="type-pill bg-warning bg-opacity-10 text-warning">ESSAY</span>
+                            <a href="{% url 'delete_exam_question' q.id %}" class="btn btn-link text-danger p-0" title="Remove" onclick="return confirm('Remove this question?')"><i class="fa-solid fa-trash-can"></i></a>
                             {% endif %}
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1 rounded-pill small fw-bold" style="font-size: 0.65rem;">{{ q.points }} PTS</span>
                         </div>
-                        {% if delete_question_url_name %}
-                        <a href="{% url delete_question_url_name q.id %}" class="btn btn-link text-danger p-0" title="Remove" onclick="return confirm('Remove this question?')"><i class="fa-solid fa-trash-can"></i></a>
+                        <h6 class="fw-bold text-dark mb-4" style="line-height: 1.6;">{{ q.question }}</h6>
+                        
+                        {% if q.q_type != 'essay' %}
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="p-2 px-3 rounded-3 border {% if '1' in q.correct_answer or q.correct_answer == '1' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                                    <strong>A.</strong> {{ q.option_1 }}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 px-3 rounded-3 border {% if '2' in q.correct_answer or q.correct_answer == '2' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                                    <strong>B.</strong> {{ q.option_2 }}
+                                </div>
+                            </div>
+                            {% if q.option_3 %}
+                            <div class="col-6">
+                                <div class="p-2 px-3 rounded-3 border {% if '3' in q.correct_answer or q.correct_answer == '3' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                                    <strong>C.</strong> {{ q.option_3 }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if q.option_4 %}
+                            <div class="col-6">
+                                <div class="p-2 px-3 rounded-3 border {% if '4' in q.correct_answer or q.correct_answer == '4' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
+                                    <strong>D.</strong> {{ q.option_4 }}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
                         {% else %}
-                        <a href="{% url 'delete_exam_question' q.id %}" class="btn btn-link text-danger p-0" title="Remove" onclick="return confirm('Remove this question?')"><i class="fa-solid fa-trash-can"></i></a>
-                        {% endif %}
-                    </div>
-                    <h6 class="fw-bold text-dark mb-4" style="line-height: 1.6;">{{ q.question }}</h6>
-                    
-                    {% if q.q_type != 'essay' %}
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <div class="p-2 px-3 rounded-3 border {% if '1' in q.correct_answer or q.correct_answer == '1' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
-                                <strong>A.</strong> {{ q.option_1 }}
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 px-3 rounded-3 border {% if '2' in q.correct_answer or q.correct_answer == '2' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
-                                <strong>B.</strong> {{ q.option_2 }}
-                            </div>
-                        </div>
-                        {% if q.option_3 %}
-                        <div class="col-6">
-                            <div class="p-2 px-3 rounded-3 border {% if '3' in q.correct_answer or q.correct_answer == '3' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
-                                <strong>C.</strong> {{ q.option_3 }}
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% if q.option_4 %}
-                        <div class="col-6">
-                            <div class="p-2 px-3 rounded-3 border {% if '4' in q.correct_answer or q.correct_answer == '4' %}bg-success bg-opacity-10 border-success{% else %}bg-light{% endif %} small">
-                                <strong>D.</strong> {{ q.option_4 }}
-                            </div>
+                        <div class="p-3 bg-light rounded-4 text-center text-muted small">
+                            <i class="fa-solid fa-pen-nib me-1"></i> Descriptive answer expected from student.
                         </div>
                         {% endif %}
                     </div>
-                    {% else %}
-                    <div class="p-3 bg-light rounded-4 text-center text-muted small">
-                        <i class="fa-solid fa-pen-nib me-1"></i> Descriptive answer expected from student.
+                    {% empty %}
+                    <div class="text-center py-5 bg-white rounded-4 border-dashed border-2" style="border-style: dashed !important;">
+                        <div class="mb-3"><i class="fa-solid fa-folder-open text-muted display-4 opacity-25"></i></div>
+                        <h6 class="text-muted">This exam paper is currently empty.</h6>
                     </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <div class="text-center py-5 bg-white rounded-4 border-dashed border-2" style="border-style: dashed !important;">
-                    <div class="mb-3"><i class="fa-solid fa-folder-open text-muted display-4 opacity-25"></i></div>
-                    <h6 class="text-muted">This exam paper is currently empty.</h6>
-                </div>
-                {% endfor %}
             </div>
         </div>
     </main>

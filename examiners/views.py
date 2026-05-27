@@ -424,6 +424,13 @@ def examiner_dashboard(request):
             conductor.first_name = request.POST.get('first_name', conductor.first_name)
             conductor.last_name = request.POST.get('last_name', conductor.last_name)
             conductor.email = request.POST.get('email', conductor.email)
+            conductor.specialty = request.POST.get('specialty', conductor.specialty)
+            experience_years = request.POST.get('experience_years')
+            if experience_years is not None:
+                try:
+                    conductor.experience_years = int(experience_years)
+                except ValueError:
+                    pass
             conductor.save()
             messages.success(request, f"Conductor {conductor.username} updated.")
             return redirect('/examiners/dashboard/#teachers')

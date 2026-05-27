@@ -125,6 +125,11 @@
                         <i class="fa-solid fa-camera text-success me-2"></i>Live Proctoring
                     </h6>
                     
+                    <div id="cameraSelectorContainer" class="mb-3 d-none">
+                        <label for="cameraSource" class="form-label small fw-bold text-secondary mb-1">Select Camera:</label>
+                        <select id="cameraSource" class="form-select form-select-sm rounded-pill border-2 fw-semibold"></select>
+                    </div>
+
                     <div class="position-relative overflow-hidden rounded-4 shadow-sm bg-dark" style="border: 3px solid #198754; min-height: 200px;">
                         <video id="webcam" autoplay muted playsinline width="100%" class="d-block"></video>
                         <span class="position-absolute top-0 end-0 m-2 badge bg-danger shadow-sm recording-dot px-2 py-1">
@@ -187,6 +192,119 @@
     let cameraCheckTimer = null;
     const lastEventSentAt = {};
 
+    let currentStream = null;
+    const cameraSelectorContainer = document.getElementById('cameraSelectorContainer');
+    const cameraSourceSelect = document.getElementById('cameraSource');
+
+    function stopCurrentStream() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => {
+                track.stop();
+            });
+            currentStream = null;
+        }
+    }
+
+    let hasAutoSelectedPreferred = false;
+
+    function getCameraScore(label) {
+        const lowerLabel = (label || '').toLowerCase();
+        let score = 0;
+        
+        // Prefer built-in/internal/system webcams
+        if (lowerLabel.includes('integrated') || 
+            lowerLabel.includes('built-in') || 
+            lowerLabel.includes('internal') || 
+            lowerLabel.includes('wide vision') || 
+            lowerLabel.includes('hd camera') || 
+            lowerLabel.includes('webcam') || 
+            lowerLabel.includes('front') ||
+            lowerLabel.includes('facetime')) {
+            score += 10;
+        }
+        
+        // Deprioritize virtual/fake/external app cameras (e.g. OBS, Droidcam, etc.)
+        if (lowerLabel.includes('virtual') || 
+            lowerLabel.includes('obs') || 
+            lowerLabel.includes('droidcam') || 
+            lowerLabel.includes('epoccam') || 
+            lowerLabel.includes('iregistrator') || 
+            lowerLabel.includes('virtual camera')) {
+            score -= 20;
+        }
+        
+        return score;
+    }
+
+    function updateCameraList() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+            return;
+        }
+        navigator.mediaDevices.enumerateDevices()
+            .then(function(devices) {
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                
+                // Clear existing options
+                cameraSourceSelect.innerHTML = '';
+                
+                if (videoDevices.length > 1) {
+                    cameraSelectorContainer.classList.remove('d-none');
+                    
+                    // Find active device info
+                    let activeDeviceId = null;
+                    if (currentStream) {
+                        const activeTrack = currentStream.getVideoTracks()[0];
+                        if (activeTrack && activeTrack.getSettings) {
+                            activeDeviceId = activeTrack.getSettings().deviceId;
+                        }
+                    }
+                    
+                    // Score each device to find the best candidate
+                    let bestDevice = null;
+                    let bestScore = -999;
+                    
+                    videoDevices.forEach((device, index) => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${index + 1}`;
+                        
+                        const score = getCameraScore(device.label);
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestDevice = device;
+                        }
+                        
+                        cameraSourceSelect.appendChild(option);
+                    });
+                    
+                    // If we have not auto-selected a preferred camera yet,
+                    // and the best scored camera is different from the currently active default camera,
+                    // switch to the best camera automatically!
+                    if (!hasAutoSelectedPreferred && bestDevice && activeDeviceId && bestDevice.deviceId !== activeDeviceId) {
+                        const activeDevice = videoDevices.find(d => d.deviceId === activeDeviceId);
+                        const activeScore = activeDevice ? getCameraScore(activeDevice.label) : 0;
+                        if (bestScore > activeScore) {
+                            hasAutoSelectedPreferred = true;
+                            cameraSourceSelect.value = bestDevice.deviceId;
+                            initCamera(bestDevice.deviceId);
+                            return;
+                        }
+                    }
+                    
+                    // Set current selected value in select element
+                    if (activeDeviceId) {
+                        cameraSourceSelect.value = activeDeviceId;
+                    }
+                    
+                } else {
+                    cameraSelectorContainer.classList.add('d-none');
+                }
+            })
+            .catch(function(err) {
+                console.error("Error enumerating devices:", err);
+            });
+    }
+
     function setCameraStatus(message, statusClass) {
         if (cameraStatus) {
             cameraStatus.innerText = message;
@@ -218,21 +336,27 @@
         sampleCanvas.width = 80;
         sampleCanvas.height = 60;
         const sampleContext = sampleCanvas.getContext('2d');
-        sampleContext.drawImage(videoElement, 0, 0, sampleCanvas.width, sampleCanvas.height);
-        const pixels = sampleContext.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height).data;
+        try {
+            sampleContext.drawImage(videoElement, 0, 0, sampleCanvas.width, sampleCanvas.height);
+            const pixels = sampleContext.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height).data;
 
-        let total = 0;
-        let totalSq = 0;
-        for (let i = 0; i < pixels.length; i += 4) {
-            const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-            total += brightness;
-            totalSq += brightness * brightness;
+            let total = 0;
+            let totalSq = 0;
+            for (let i = 0; i < pixels.length; i += 4) {
+                const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+                total += brightness;
+                totalSq += brightness * brightness;
+            }
+            const count = pixels.length / 4;
+            const mean = total / count;
+            const variance = Math.max(0, totalSq / count - mean * mean);
+            const contrast = Math.sqrt(variance);
+            console.log("Webcam frame stats - Mean brightness:", mean, "Contrast:", contrast);
+            return mean > 2 && mean < 253 && contrast > 0.5;
+        } catch (e) {
+            console.warn("Could not check camera pixel data, defaulting to true:", e);
+            return true;
         }
-        const count = pixels.length / 4;
-        const mean = total / count;
-        const variance = Math.max(0, totalSq / count - mean * mean);
-        const contrast = Math.sqrt(variance);
-        return mean > 12 && mean < 245 && contrast > 4;
     }
 
     function markCameraReadyWhenVisible() {
@@ -272,28 +396,62 @@
         setTimeout(markCameraReadyWhenVisible, 250);
     }
 
-    navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false
-    })
-        .then(function(stream) {
-            videoElement.srcObject = stream;
-            videoElement.onloadedmetadata = function() {
+    function initCamera(deviceId = null) {
+        stopCurrentStream();
+        
+        const constraints = {
+            audio: false,
+            video: deviceId ? { deviceId: { exact: deviceId } } : true
+        };
+
+        return navigator.mediaDevices.getUserMedia(constraints)
+            .then(function(stream) {
+                currentStream = stream;
+                videoElement.srcObject = stream;
+                
+                // Enumerate cameras now that permission is granted
+                updateCameraList();
+
+                videoElement.onloadedmetadata = function() {
+                    videoElement.play().catch(error => console.warn("Camera preview play warning:", error));
+                    startCameraReadinessChecks();
+                };
+                videoElement.addEventListener('loadeddata', startCameraReadinessChecks);
+                videoElement.addEventListener('canplay', markCameraReadyWhenVisible);
                 videoElement.play().catch(error => console.warn("Camera preview play warning:", error));
-                startCameraReadinessChecks();
-            };
-            videoElement.addEventListener('loadeddata', startCameraReadinessChecks);
-            videoElement.addEventListener('canplay', markCameraReadyWhenVisible);
-            videoElement.play().catch(error => console.warn("Camera preview play warning:", error));
-        })
-        .catch(function(err) {
-            alert("Webcam access is required for this Proctored Exam! Please allow camera permissions.");
-            console.error("Camera error:", err);
-            setCameraStatus("Camera permission is blocked. Please allow camera access to start.", "text-danger");
-            if (assessmentStarted) {
-                reportProctoringEvent('camera_stalled');
+            })
+            .catch(function(err) {
+                console.error("Camera error:", err);
+                let userMsg = "Webcam access is required for this Proctored Exam! Please allow camera permissions.";
+                let statusMsg = "Camera permission is blocked or camera is in use. Please allow camera access to start.";
+                
+                if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                    userMsg = "Selected camera is already in use by another application. Please close other apps using the camera and try again.";
+                    statusMsg = "Camera is in use by another application.";
+                } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    userMsg = "No webcam found. Please connect an external camera and refresh.";
+                    statusMsg = "No camera devices found.";
+                }
+                
+                alert(userMsg);
+                setCameraStatus(statusMsg, "text-danger");
+                if (assessmentStarted) {
+                    reportProctoringEvent('camera_stalled');
+                }
+            });
+    }
+
+    if (cameraSourceSelect) {
+        cameraSourceSelect.addEventListener('change', function() {
+            const selectedDeviceId = cameraSourceSelect.value;
+            if (selectedDeviceId) {
+                initCamera(selectedDeviceId);
             }
         });
+    }
+
+    // Initialize camera on page load
+    initCamera();
 
     // ==========================================
     // 3. AI FRAME CAPTURE & AJAX LOGIC
@@ -376,17 +534,6 @@
         }
     });
 
-    window.addEventListener('blur', function() {
-        if (!assessmentStarted) {
-            return;
-        }
-        setTimeout(function() {
-            if (document.hidden) {
-                return;
-            }
-            reportProctoringEvent('window_blur', 5000);
-        }, 750);
-    });
 
     setInterval(function() {
         if (!assessmentStarted) {

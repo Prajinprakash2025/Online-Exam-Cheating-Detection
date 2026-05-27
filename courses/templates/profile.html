@@ -151,6 +151,39 @@
 
                 <hr class="border-light my-4">
 
+                {% if not user.is_superuser and not user.is_examiner and not user.is_teacher %}
+                    <div class="text-start bg-light p-3 rounded-4 mb-4 small">
+                        <div class="mb-2">
+                            <span class="text-muted d-block smaller fw-bold">STUDENT ID (ROLL NO)</span>
+                            <span class="fw-semibold text-dark">{{ user.roll_no|default:"Not set" }}</span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="text-muted d-block smaller fw-bold">PHONE NUMBER</span>
+                            <span class="fw-semibold text-dark">{{ user.phone_number|default:"Not set" }}</span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="text-muted d-block smaller fw-bold">AGE</span>
+                            <span class="fw-semibold text-dark">{% if user.age %}{{ user.age }} Years Old{% else %}Not set{% endif %}</span>
+                        </div>
+                        <div class="mb-0">
+                            <span class="text-muted d-block smaller fw-bold">ASSIGNED CONDUCTOR(S)</span>
+                            {% if assigned_teachers %}
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    {% for teacher in assigned_teachers %}
+                                        <span class="badge bg-white text-primary border rounded-pill px-2 py-1 small">
+                                            <i class="fa-solid fa-chalkboard-user me-1"></i>{{ teacher.get_full_name|default:teacher.username }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-warning small mt-1 d-inline-block">
+                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>No assigned conductor
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
                 <div class="d-grid gap-2">
                     <a href="{% url 'edit_profile' %}" class="btn btn-outline-secondary btn-action">
                         <i class="fa-solid fa-gear me-2"></i> Edit Profile
@@ -202,6 +235,22 @@
                                         {% else %}
                                             <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">
                                                 In Progress
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="mb-3">
+                                        {% if enrollment.teachers %}
+                                            <span class="text-muted small">
+                                                <i class="fa-solid fa-chalkboard-user me-1 text-primary"></i> 
+                                                Conductor: 
+                                                {% for teacher in enrollment.teachers %}
+                                                    <span class="fw-bold text-dark">{{ teacher.get_full_name|default:teacher.username }}</span>{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small text-warning">
+                                                <i class="fa-solid fa-triangle-exclamation me-1"></i> No assigned conductor
                                             </span>
                                         {% endif %}
                                     </div>

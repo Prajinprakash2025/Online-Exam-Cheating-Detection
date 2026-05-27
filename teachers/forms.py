@@ -10,7 +10,7 @@ class TeacherCreateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name']
+        fields = ['email', 'first_name', 'last_name', 'specialty', 'experience_years']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -101,6 +101,11 @@ class Exam(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_exams')
 
+    @property
+    def total_points(self):
+        from django.db.models import Sum
+        return self.questions.aggregate(total=Sum('points'))['total'] or 0.0
+
     def __str__(self):
         return f"{self.title} ({self.course.title})"
 

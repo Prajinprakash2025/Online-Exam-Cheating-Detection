@@ -24,9 +24,27 @@
                 </div>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-3">
                 <label class="form-label fw-bold small text-muted">Email Address</label>
                 <input type="email" name="email" class="form-control rounded-pill" value="{{ user.email }}">
+            </div>
+
+            {% if not user.is_superuser and not user.is_examiner and not user.is_teacher %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted">Student ID (Roll No)</label>
+                        <input type="text" name="roll_no" class="form-control rounded-pill" value="{{ user.roll_no|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted">Age</label>
+                        <input type="number" name="age" class="form-control rounded-pill" value="{{ user.age|default:'' }}" min="0">
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="mb-4">
+                <label class="form-label fw-bold small text-muted">Phone Number</label>
+                <input type="text" name="phone_number" class="form-control rounded-pill" value="{{ user.phone_number|default:'' }}">
             </div>
 
             <button class="btn btn-custom w-100 rounded-pill py-2 text-white fw-bold shadow-sm" style="background-color: #8e44ad;">
