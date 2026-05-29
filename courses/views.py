@@ -864,21 +864,26 @@ YOLO_MODEL = None
 YOLO_MODEL_PATH = str(settings.BASE_DIR / 'yolov8n.pt')
 YOLO_PERSON_CLASS_ID = 0
 YOLO_PHONE_CLASS_ID = 67
-YOLO_PERSON_CONFIDENCE = 0.35
-YOLO_PHONE_CONFIDENCE = 0.25
+# Lowered person confidence to catch side-profiles and partially occluded people
+YOLO_PERSON_CONFIDENCE = 0.28
+# Lowered phone confidence - phones can look very different; YOLO+proximity filter guards FP
+YOLO_PHONE_CONFIDENCE = 0.18
 
 
 FRAME_CONFIRMATION_RULES = {
-    'phone_detected': {'needed': 1, 'timeout': 20},
-    'multi_face': {'needed': 2, 'timeout': 20},
+    # Phone only needs 1 confirmed detection (user explicitly holds phone - high signal)
+    'phone_detected': {'needed': 1, 'timeout': 25},
+    # Multi-person needs 2 frames within 25s to avoid fleeting shadows
+    'multi_face': {'needed': 2, 'timeout': 25},
     'no_face': {'needed': 2, 'timeout': 20},
-    'head_pose': {'needed': 2, 'timeout': 20},
-    'gaze_deviation': {'needed': 2, 'timeout': 20},
+    'head_pose': {'needed': 2, 'timeout': 25},
+    'gaze_deviation': {'needed': 2, 'timeout': 25},
 }
 
 EVENT_CONFIRMATION_RULES = {
-    'tab_switch': {'needed': 1, 'timeout': 15},
-    'window_blur': {'needed': 2, 'timeout': 10},
+    # Tab switch: log immediately on 1st occurrence (deliberate browser action)
+    'tab_switch': {'needed': 1, 'timeout': 30},
+    'window_blur': {'needed': 1, 'timeout': 15},
     'camera_stalled': {'needed': 2, 'timeout': 20},
 }
 
@@ -935,35 +940,6 @@ def _detect_yolo_objects(frame):
     if model is None:
         return [], []
 
-    # 1. Run detection on standard BGR frame (YOLO converts this to RGB internally)
-    try:
-        res_bgr = model.predict(
-            frame,
-            imgsz=640,
-            conf=min(YOLO_PHONE_CONFIDENCE, YOLO_PERSON_CONFIDENCE),
-            classes=[YOLO_PERSON_CLASS_ID, YOLO_PHONE_CLASS_ID],
-            verbose=False,
-            device='cpu',
-        )
-    except Exception as exc:
-        print("YOLO detection error (BGR):", exc)
-        res_bgr = None
-
-    # 2. Run detection on RGB-converted frame (YOLO converts this to BGR internally, providing color-swapped feature enhancement)
-    try:
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        res_rgb = model.predict(
-            rgb_frame,
-            imgsz=640,
-            conf=min(YOLO_PHONE_CONFIDENCE, YOLO_PERSON_CONFIDENCE),
-            classes=[YOLO_PERSON_CLASS_ID, YOLO_PHONE_CLASS_ID],
-            verbose=False,
-            device='cpu',
-        )
-    except Exception as exc:
-        print("YOLO detection error (RGB):", exc)
-        res_rgb = None
-
     person_boxes = []
     phone_boxes = []
 
@@ -984,8 +960,20 @@ def _detect_yolo_objects(frame):
             elif class_id == YOLO_PHONE_CLASS_ID and confidence >= YOLO_PHONE_CONFIDENCE:
                 phone_boxes.append(detected_box)
 
-    process_results(res_bgr)
-    process_results(res_rgb)
+    # Run on BGR frame only — running duplicate RGB pass caused double-counting
+    # and the dedup heuristic was unreliable for small phones
+    try:
+        res = model.predict(
+            frame,
+            imgsz=640,
+            conf=min(YOLO_PHONE_CONFIDENCE, YOLO_PERSON_CONFIDENCE),
+            classes=[YOLO_PERSON_CLASS_ID, YOLO_PHONE_CLASS_ID],
+            verbose=False,
+            device='cpu',
+        )
+        process_results(res)
+    except Exception as exc:
+        print("YOLO detection error:", exc)
 
     return _dedupe_boxes_with_conf(person_boxes), _dedupe_boxes_with_conf(phone_boxes)
 
@@ -1023,8 +1011,8 @@ def _get_latest_frame_snapshot_file(session_id):
 
 def _detect_faces(gray_frame):
     """
-    Cascade ensemble with eye-validation to drop false positives
-    (e.g., phones or background mistaken as faces).
+    Cascade ensemble. Accept faces broadly (eye check optional) to avoid
+    missing angled/partially-occluded faces and far-away faces.
     """
     frame_h, frame_w = gray_frame.shape[:2]
     cascades = (face_cascade, alt_face_cascade, profile_face_cascade)
@@ -1032,24 +1020,17 @@ def _detect_faces(gray_frame):
     for cascade in cascades:
         faces = cascade.detectMultiScale(
             gray_frame,
-            scaleFactor=1.08,
-            minNeighbors=5,
-            minSize=(70, 70)
+            scaleFactor=1.06,
+            minNeighbors=4,
+            minSize=(55, 55)
         )
         for (x, y, w, h) in faces:
             area_ratio = (w * h) / float(frame_w * frame_h)
             aspect = w / float(h) if h else 0
-            if area_ratio < 0.015 or area_ratio > 0.45 or not 0.65 <= aspect <= 1.35:
+            # Wider aspect range to accept profile faces
+            if area_ratio < 0.01 or area_ratio > 0.55 or not 0.50 <= aspect <= 1.60:
                 continue
-            roi = gray_frame[y:y+h, x:x+w]
-            eyes = eye_cascade.detectMultiScale(
-                roi, scaleFactor=1.1, minNeighbors=5, minSize=(14, 14)
-            )
-            upper_y = y + int(h * 0.65)
-            if len(eyes) > 0:
-                all_faces.append((x, y, w, h))
-            elif y < upper_y and area_ratio >= 0.035:
-                all_faces.append((x, y, w, h))
+            all_faces.append((x, y, w, h))
     return _dedupe_boxes(all_faces)
 
 
@@ -1065,7 +1046,8 @@ def _detect_people(frame):
     for person, weight in zip(people, weights):
         x, y, w, h = person
         area_ratio = (w * h) / float(frame_area)
-        if area_ratio >= 0.08 and weight >= 0.45:
+        # Lowered area_ratio threshold to detect people seated/partially visible
+        if area_ratio >= 0.05 and weight >= 0.40:
             filtered.append((x, y, w, h))
             filtered_weights.append(float(weight))
     return filtered, filtered_weights
@@ -1162,14 +1144,17 @@ def process_quiz_frame(request, session_id):
             if event_type:
                 allowed_events = {
                     'tab_switch': ('tab_switch', 0.98, 'Browser tab/window changed'),
-                    'window_blur': ('tab_switch', 0.92, 'Browser window lost focus'),
-                    'camera_stalled': ('no_face', 0.9, 'Camera feed stalled or unavailable'),
+                    'window_blur': ('tab_switch', 0.95, 'Browser window lost focus'),
+                    'camera_stalled': ('no_face', 0.90, 'Camera feed stalled or unavailable'),
                 }
                 if event_type not in allowed_events:
                     return JsonResponse({'status': 'ignored', 'violation': False})
 
                 violation_type, confidence, message = allowed_events[event_type]
-                if not _should_log_confirmed_violation(session.id, event_type, EVENT_CONFIRMATION_RULES):
+
+                # Check confirmation rules FIRST, then log if threshold met
+                confirmed = _should_log_confirmed_violation(session.id, event_type, EVENT_CONFIRMATION_RULES)
+                if not confirmed:
                     return JsonResponse({
                         'status': 'success',
                         'violation': False,
@@ -1177,21 +1162,30 @@ def process_quiz_frame(request, session_id):
                         'message': 'Browser event observed; waiting for confirmation.',
                     })
 
+                # Event confirmed — reset counter and log
                 _reset_event_state(session.id, event_type)
                 evidence_file = _get_latest_frame_snapshot_file(session.id)
                 if evidence_file is not None:
-                    ProctoringLog.objects.create(
+                    log_obj = ProctoringLog.objects.create(
                         session=session,
                         violation_type=violation_type,
                         confidence_score=confidence,
                         evidence_image=evidence_file,
                     )
-                    if session.status != 'flagged':
-                        session.status = 'flagged'
-                        session.save(update_fields=['status'])
                     logged = True
                 else:
-                    logged = _log_proctoring_violation(session, violation_type, confidence)
+                    # No snapshot yet — still create a log entry without image
+                    log_obj = ProctoringLog.objects.create(
+                        session=session,
+                        violation_type=violation_type,
+                        confidence_score=confidence,
+                    )
+                    logged = True
+
+                if session.status != 'flagged':
+                    session.status = 'flagged'
+                    session.save(update_fields=['status'])
+
                 return JsonResponse({
                     'status': 'success',
                     'violation': logged,
@@ -1305,28 +1299,54 @@ def process_quiz_frame(request, session_id):
                         confidence = 0.95
                         cv2.putText(frame, "ALERT: NO FACE DETECTED", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
-                # 4) ONE FACE: check eyes (looking away / phone down)
+                # 4) ONE FACE: check head pose (looking away from screen)
                 else:
                     x, y, w, h = faces[0]
-                    roi_gray = gray[y:y+h, x:x+w] # Focus AI only on the face area
-                    
-                    eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.1, minNeighbors=5, minSize=(15, 15))
+                    roi_gray = gray[y:y+h, x:x+w]  # Focus AI only on the face area
+
                     face_center_x = x + (w / 2)
                     face_center_y = y + (h / 2)
-                    looking_edge = (
-                        face_center_x < frame.shape[1] * 0.42 or
-                        face_center_x > frame.shape[1] * 0.58 or
-                        face_center_y < frame.shape[0] * 0.38 or
-                        face_center_y > frame.shape[0] * 0.62
+                    frame_w = frame.shape[1]
+                    frame_h_dim = frame.shape[0]
+
+                    # --- Head pose signals ---
+                    # 1. Face off-center laterally (person looking sideways at phone etc.)
+                    off_center_x = (
+                        face_center_x < frame_w * 0.38 or
+                        face_center_x > frame_w * 0.62
                     )
-                    
-                    if len(eyes) == 0 and looking_edge:
+                    # 2. Face very high in frame (person leaning back/looking up)
+                    off_center_y = face_center_y < frame_h_dim * 0.30
+                    # 3. Face is very small = person turned far away or moved back
+                    face_area_ratio = (w * h) / float(frame_w * frame_h_dim)
+                    face_too_small = face_area_ratio < 0.02
+                    # 4. Profile-like: width/height ratio is very narrow
+                    face_aspect = w / float(h) if h else 1
+                    face_is_profile = face_aspect < 0.65 or face_aspect > 1.40
+
+                    # Eye detection to confirm gaze direction
+                    eyes = eye_cascade.detectMultiScale(
+                        roi_gray, scaleFactor=1.1, minNeighbors=4, minSize=(12, 12)
+                    )
+                    no_eyes_detected = len(eyes) == 0
+
+                    # Trigger: Any two independent signals confirm looking away
+                    signals = sum([
+                        bool(off_center_x),
+                        bool(off_center_y),
+                        bool(face_too_small),
+                        bool(face_is_profile),
+                        bool(no_eyes_detected),
+                    ])
+
+                    if signals >= 2:
                         violation_detected = True
                         violation_type = 'gaze_deviation'
-                        confidence = 0.78
-                        
-                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 165, 255), 3) # Orange box
-                        cv2.putText(frame, "LOOKING AWAY / PHONE", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
+                        # Higher confidence if more signals agree
+                        confidence = round(0.65 + (signals * 0.07), 2)
+
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 165, 255), 3)  # Orange box
+                        cv2.putText(frame, "LOOKING AWAY", (x, max(20, y-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
 
                 # ==========================================================
 

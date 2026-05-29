@@ -523,22 +523,31 @@
         markCameraReadyWhenVisible();
     });
 
+    // Tab switch: Page Visibility API (most reliable)
     document.addEventListener('visibilitychange', function() {
-        if (!assessmentStarted) {
-            return;
-        }
+        if (!assessmentStarted) return;
         if (document.hidden) {
-            reportProctoringEvent('tab_switch');
+            reportProctoringEvent('tab_switch', 0);
         } else {
-            captureAndSendFrame();
+            // Return to tab: immediately capture frame as evidence
+            setTimeout(captureAndSendFrame, 300);
         }
     });
 
+    // Window blur: User switched to another app / opened another window
+    window.addEventListener('blur', function() {
+        if (!assessmentStarted) return;
+        reportProctoringEvent('window_blur', 2000);
+    });
 
+    window.addEventListener('focus', function() {
+        if (!assessmentStarted) return;
+        setTimeout(captureAndSendFrame, 300);
+    });
+
+    // Periodic stall check: if no frame sent in 10s something is wrong
     setInterval(function() {
-        if (!assessmentStarted) {
-            return;
-        }
+        if (!assessmentStarted) return;
         if (Date.now() - lastFrameSentAt > 10000) {
             reportProctoringEvent('camera_stalled', 8000);
         }
